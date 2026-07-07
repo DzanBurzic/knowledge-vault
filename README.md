@@ -9,6 +9,15 @@ Notes are saved as plain Markdown files in an [Obsidian](https://obsidian.md)
 vault, automatically organized into folders, deduplicated, and searchable —
 plus a knowledge graph so you can see how everything connects.
 
+<p align="center">
+  <img src="docs/screenshots/recently-added.png" width="49%" alt="Recently added feed showing saved notes">
+  <img src="docs/screenshots/graph.png" width="49%" alt="Knowledge graph of notes and categories">
+</p>
+<p align="center">
+  <img src="docs/screenshots/bulk-actions.png" width="49%" alt="Selecting multiple notes to tag, move, or delete at once">
+  <img src="docs/screenshots/maybe-related.png" width="49%" alt="A card view showing a suggested related note">
+</p>
+
 ## What you need
 
 - **Windows 10 or 11.**
@@ -37,9 +46,17 @@ Open that folder in Obsidian any time to browse your notes directly.
 - **Add** — paste a link (Instagram reel, TikTok, YouTube, an article) or any
   raw text. It's processed automatically and shows up in **Recently added**.
 - **Browse** / **Search** — your notes, organized into folders that grow on
-  their own as you save more.
+  their own as you save more. Tick multiple notes to tag, move, or delete
+  them all at once.
 - **Graph** — a visual map of your notes and categories, similar to
   Obsidian's graph view.
+- **Maybe related** — on a note's page, similar notes that weren't quite
+  close enough to link automatically are suggested, with a one-click Link
+  button to confirm them.
+- **Backups** — a snapshot of your database is taken automatically every
+  time the app starts (Settings → Backups also has a manual "Back up now").
+  Your Markdown notes are already safe in the vault folder; this covers the
+  search index, categories, and links that only live in the database.
 - **Phone capture (optional)** — after first setup, open the file
   `PHONE-SETUP.md` that appears in this folder. It walks you through a free,
   10-minute setup (a Cloudflare account) so you can share a reel from your

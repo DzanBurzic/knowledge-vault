@@ -65,6 +65,18 @@
     </div>
   </div>
 </div>
+<div class="bulk-bar" id="bulk-bar" style="display:none" role="region" aria-label="Bulk actions">
+  <span id="bulk-count" class="mono">0 selected</span>
+  <input type="text" id="bulk-tag-input" placeholder="Add tag(s), comma separated"
+    aria-label="Tags to add to selected notes">
+  <button class="btn" id="bulk-tag-btn" type="button">Add tag</button>
+  <input type="text" id="bulk-move-input" placeholder="Move to category…"
+    list="bulk-cat-datalist" aria-label="Category to move selected notes to">
+  <datalist id="bulk-cat-datalist"></datalist>
+  <button class="btn" id="bulk-move-btn" type="button">Move</button>
+  <button class="btn danger" id="bulk-delete-btn" type="button">Delete</button>
+  <button class="btn" id="bulk-clear-btn" type="button">Clear</button>
+</div>
 <script src="/static/app.js"></script>
 {% block scripts %}{% endblock %}
 </body>

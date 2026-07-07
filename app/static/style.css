@@ -248,9 +248,35 @@ form .btn { margin-top: 14px; }
   font-family: var(--font-mono);
 }
 
-.result-card { transition: border-color var(--ease), transform var(--ease); }
+.result-card { transition: border-color var(--ease), transform var(--ease); position: relative; padding-left: 42px; }
 .result-card:hover { border-color: var(--violet-soft); }
 .result-card .small { color: var(--faint); font-family: var(--font-mono); }
+
+.bulk-select {
+  position: absolute; top: 18px; left: 16px; width: 20px; height: 20px;
+  display: flex; align-items: center; justify-content: center;
+}
+.bulk-select input { width: 18px; height: 18px; margin: 0; accent-color: var(--violet); }
+
+.bulk-bar {
+  position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%);
+  z-index: 40; display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+  max-width: min(720px, calc(100vw - 40px));
+  background: var(--panel); border: 1px solid var(--violet-soft);
+  border-radius: var(--radius); padding: 10px 12px;
+  box-shadow: var(--shadow-lg);
+}
+.bulk-bar input[type="text"] { width: auto; flex: 1; min-width: 140px; }
+.bulk-bar #bulk-count { color: var(--violet-2); white-space: nowrap; padding: 0 2px; }
+
+/* --------------------------------------------------------------- maybe related */
+.maybe-list { list-style: none; padding: 0; margin: 4px 0 0; }
+.maybe-list li {
+  display: flex; align-items: center; gap: 10px; padding: 8px 0;
+  border-bottom: 1px solid var(--line-soft);
+}
+.maybe-list li:last-child { border-bottom: none; }
+.maybe-list .btn { margin-left: auto; padding: 5px 12px; font-size: 13px; }
 
 .actions-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .search-row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }

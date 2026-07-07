@@ -12,8 +12,8 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from . import (categories, cloudsync, db, inbox, lifecycle, notes,
-               ollama_client, pipeline, search)
+from . import (backup, categories, cloudsync, db, dedupe, inbox, lifecycle,
+               notes, ollama_client, pipeline, search)
 from .config import load_config, save_config, vault_path
 from .worker import WORKER
 
@@ -25,6 +25,10 @@ LONE_URL_RE = re.compile(r"^https?://\S+$")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     db.init_db()
+    try:
+        backup.create_backup(reason="startup")  # cheap insurance; never blocks startup
+    except OSError:
+        pass
     WORKER.start()
     yield
     WORKER.stop()
@@ -106,6 +110,7 @@ def category_page(request: Request, category_id: int, include_archived: int = 0)
 @app.get("/card/{item_id}", response_class=HTMLResponse)
 def card_page(request: Request, item_id: int):
     """Card view: rendered note + edit controls + every contributing source (R39, R43, R51)."""
+    cfg = load_config()
     with db.get_conn() as conn:
         item = conn.execute("SELECT * FROM items WHERE id = ?", (item_id,)).fetchone()
         if not item:
@@ -120,6 +125,7 @@ def card_page(request: Request, item_id: int):
             "WHERE rl.item_id = :id OR rl.related_item_id = :id",
             {"id": item_id},
         ).fetchall()
+        maybe = dedupe.maybe_related(conn, item_id, cfg)
         cats = category_tree(conn)
         raw = conn.execute(
             "SELECT extraction_log FROM raw_extractions WHERE item_id = ?", (item_id,)
@@ -135,7 +141,7 @@ def card_page(request: Request, item_id: int):
                   tags_list=db.unj(item["tags"], []),
                   category=dict(cat) if cat else None,
                   dupes=[dict(d) for d in dupes], related=[dict(r) for r in related],
-                  cats=cats, body_html=body_html,
+                  maybe=maybe, cats=cats, body_html=body_html,
                   extraction_log=(raw["extraction_log"] if raw else ""))
 
 
@@ -236,6 +242,28 @@ def api_edit(item_id: int, title: str = Form(...), category: str = Form(...),
     return {"ok": True}
 
 
+@app.post("/api/card/{item_id}/link-related/{other_id}")
+def api_link_related(item_id: int, other_id: int):
+    """Promote a 'maybe related' suggestion into a real bidirectional link."""
+    vault = vault_path()
+    with db.get_conn() as conn:
+        if not conn.execute("SELECT 1 FROM items WHERE id = ?", (other_id,)).fetchone():
+            return JSONResponse({"ok": False, "error": "That note no longer exists."},
+                                status_code=404)
+        sim = dedupe.pairwise_similarity(conn, item_id, other_id) or 0.0
+        a, b = sorted((item_id, other_id))
+        conn.execute(
+            "INSERT OR IGNORE INTO related_links (item_id, related_item_id, similarity) "
+            "VALUES (?, ?, ?)", (a, b, sim),
+        )
+        notes.write_item_note(conn, item_id, vault)
+        notes.write_item_note(conn, other_id, vault)
+        cloudsync.mark_dirty(conn, item_id, "put")
+        cloudsync.mark_dirty(conn, other_id, "put")
+        conn.commit()
+    return {"ok": True}
+
+
 @app.post("/api/card/{item_id}/done")
 def api_done(item_id: int):
     """R52: sets status done, updates frontmatter, hides from default views."""
@@ -252,6 +280,77 @@ def api_delete_card(item_id: int):
         except (ValueError, notes.VaultSafetyError) as e:
             return JSONResponse({"ok": False, "error": str(e)}, status_code=400)
     return {"ok": True, "deleted": title}
+
+
+def _parse_ids(item_ids: str) -> list[int]:
+    out = []
+    for part in item_ids.split(","):
+        part = part.strip()
+        if part.isdigit():
+            out.append(int(part))
+    return out
+
+
+@app.post("/api/bulk/tag")
+def api_bulk_tag(item_ids: str = Form(...), tags: str = Form(...)):
+    """Add tag(s) to every selected note (additive — existing tags are kept)."""
+    ids = _parse_ids(item_ids)
+    new_tags = [t.strip().lower() for t in tags.split(",") if t.strip()]
+    if not ids or not new_tags:
+        return JSONResponse({"ok": False, "error": "Select at least one note and one tag."},
+                            status_code=400)
+    vault = vault_path()
+    updated = 0
+    with db.get_conn() as conn:
+        for iid in ids:
+            item = conn.execute("SELECT tags FROM items WHERE id = ?", (iid,)).fetchone()
+            if not item:
+                continue
+            merged = db.unj(item["tags"], []) + [t for t in new_tags if t not in db.unj(item["tags"], [])]
+            conn.execute("UPDATE items SET tags = ?, updated_at = ? WHERE id = ?",
+                        (db.j(merged), db.now(), iid))
+            db.set_item_tags(conn, iid, merged)
+            db.fts_update_item(conn, iid)
+            cloudsync.mark_dirty(conn, iid, "put")
+            notes.write_item_note(conn, iid, vault)
+            updated += 1
+        conn.commit()
+    return {"ok": True, "updated": updated}
+
+
+@app.post("/api/bulk/move")
+def api_bulk_move(item_ids: str = Form(...), category: str = Form(...)):
+    """Move every selected note into a category (created immediately if new)."""
+    ids = _parse_ids(item_ids)
+    if not ids or not category.strip():
+        return JSONResponse({"ok": False, "error": "Select at least one note and a category."},
+                            status_code=400)
+    vault = vault_path()
+    with db.get_conn() as conn:
+        try:
+            leaf_id = categories.categorize_item(conn, {}, vault, None, category, force=True)
+            categories.move_items(conn, vault, ids, leaf_id)  # marks each note cloud-dirty
+            conn.commit()
+        except notes.VaultSafetyError as e:
+            return JSONResponse({"ok": False, "error": str(e)}, status_code=400)
+    return {"ok": True, "moved": len(ids)}
+
+
+@app.post("/api/bulk/delete")
+def api_bulk_delete(item_ids: str = Form(...)):
+    """Permanently delete every selected note."""
+    ids = _parse_ids(item_ids)
+    if not ids:
+        return JSONResponse({"ok": False, "error": "Select at least one note."}, status_code=400)
+    deleted = 0
+    with db.get_conn() as conn:
+        for iid in ids:
+            try:
+                lifecycle.delete_note(conn, iid)
+                deleted += 1
+            except (ValueError, notes.VaultSafetyError):
+                continue
+    return {"ok": True, "deleted": deleted}
 
 
 @app.post("/api/category/{category_id}/done")
@@ -400,4 +499,26 @@ def api_open_vault():
     path = vault_path()
     path.mkdir(parents=True, exist_ok=True)
     os.startfile(str(path))  # noqa: S606 — local desktop app
+    return {"ok": True}
+
+
+@app.get("/api/backups")
+def api_backups():
+    return {"backups": backup.list_backups()}
+
+
+@app.post("/api/backup")
+def api_backup():
+    """Manual 'Back up now' button (a fresh one is also taken on every startup)."""
+    try:
+        path = backup.create_backup(reason="manual")
+    except OSError as e:
+        return JSONResponse({"ok": False, "error": f"Backup failed: {e}"}, status_code=500)
+    return {"ok": True, "message": f"Backup saved: {path.name}"}
+
+
+@app.post("/api/open-backups")
+def api_open_backups():
+    backup.BACKUP_DIR.mkdir(parents=True, exist_ok=True)
+    os.startfile(str(backup.BACKUP_DIR))  # noqa: S606 — local desktop app
     return {"ok": True}

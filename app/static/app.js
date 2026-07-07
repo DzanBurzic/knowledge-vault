@@ -89,3 +89,78 @@ document.addEventListener('submit', async (e) => {
   const data = await r.json();
   if (data.ok) location.reload(); else alert(data.error || 'Something went wrong.');
 });
+
+// -------------------------------------------------------- bulk selection
+// Works on any page that renders .bulk-check checkboxes (category, search).
+// Uses event delegation so it also picks up checkboxes rendered later by
+// search.html's own JS.
+const bulkSelected = new Set();
+
+function updateBulkBar() {
+  const bar = document.getElementById('bulk-bar');
+  if (!bar) return;
+  if (bulkSelected.size === 0) { bar.style.display = 'none'; return; }
+  bar.style.display = '';
+  document.getElementById('bulk-count').textContent = bulkSelected.size + ' selected';
+}
+
+document.addEventListener('change', (e) => {
+  if (!e.target.classList || !e.target.classList.contains('bulk-check')) return;
+  const id = Number(e.target.value);
+  if (e.target.checked) bulkSelected.add(id); else bulkSelected.delete(id);
+  updateBulkBar();
+});
+
+function clearBulkSelection() {
+  bulkSelected.clear();
+  document.querySelectorAll('.bulk-check').forEach((cb) => { cb.checked = false; });
+  updateBulkBar();
+}
+
+async function loadBulkCategories() {
+  const dl = document.getElementById('bulk-cat-datalist');
+  if (!dl) return;
+  const r = await fetch('/api/categories');
+  const data = await r.json();
+  dl.innerHTML = data.categories.map((c) => `<option value="${escapeHtml(c.path)}">`).join('');
+}
+
+const bulkTagBtn = document.getElementById('bulk-tag-btn');
+if (bulkTagBtn) {
+  loadBulkCategories();
+  bulkTagBtn.addEventListener('click', async () => {
+    const tags = document.getElementById('bulk-tag-input').value.trim();
+    if (!tags || !bulkSelected.size) return;
+    const body = new FormData();
+    body.append('item_ids', [...bulkSelected].join(','));
+    body.append('tags', tags);
+    const r = await fetch('/api/bulk/tag', {method: 'POST', body});
+    const data = await r.json();
+    if (data.ok) { clearBulkSelection(); location.reload(); }
+    else alert(data.error || 'Could not add tags.');
+  });
+  document.getElementById('bulk-move-btn').addEventListener('click', async () => {
+    const category = document.getElementById('bulk-move-input').value.trim();
+    if (!category || !bulkSelected.size) return;
+    const body = new FormData();
+    body.append('item_ids', [...bulkSelected].join(','));
+    body.append('category', category);
+    const r = await fetch('/api/bulk/move', {method: 'POST', body});
+    const data = await r.json();
+    if (data.ok) { clearBulkSelection(); location.reload(); }
+    else alert(data.error || 'Could not move notes.');
+  });
+  document.getElementById('bulk-delete-btn').addEventListener('click', () => {
+    if (!bulkSelected.size) return;
+    const n = bulkSelected.size;
+    confirmAction(`Delete ${n} note${n === 1 ? '' : 's'} — cannot be undone.`, async () => {
+      const body = new FormData();
+      body.append('item_ids', [...bulkSelected].join(','));
+      const r = await fetch('/api/bulk/delete', {method: 'POST', body});
+      const data = await r.json();
+      if (data.ok) { clearBulkSelection(); location.reload(); }
+      else alert(data.error || 'Could not delete notes.');
+    });
+  });
+  document.getElementById('bulk-clear-btn').addEventListener('click', clearBulkSelection);
+}

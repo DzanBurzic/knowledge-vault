@@ -51,6 +51,21 @@
 </div>
 {% endif %}
 
+{% if maybe %}
+<div class="card-box">
+  <h3>Maybe related <span class="muted small">— similar enough to check, not linked automatically</span></h3>
+  <ul class="maybe-list">
+    {% for m in maybe %}
+    <li>
+      <a href="/card/{{ m.id }}">{{ m.title }}</a>
+      <span class="muted small mono">{{ (m.similarity * 100) | round | int }}% similar</span>
+      <button class="btn" type="button" onclick="linkRelated({{ item.id }}, {{ m.id }}, this)">Link</button>
+    </li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+
 <div class="card-box">
   <h3>Edit this card</h3>
   <form id="edit-form">
@@ -80,5 +95,12 @@ document.getElementById('edit-form').addEventListener('submit', async (e) => {
   const out = document.getElementById('edit-result');
   if (data.ok) { location.reload(); } else { out.textContent = data.error || 'Error.'; }
 });
+async function linkRelated(itemId, otherId, btn) {
+  btn.disabled = true;
+  const r = await fetch(`/api/card/${itemId}/link-related/${otherId}`, {method: 'POST'});
+  const data = await r.json();
+  if (data.ok) location.reload();
+  else { btn.disabled = false; alert(data.error || 'Could not link.'); }
+}
 </script>
 {% endblock %}

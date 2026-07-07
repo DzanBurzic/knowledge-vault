@@ -40,6 +40,20 @@
   <button class="btn primary" onclick="syncPhone(this)">📲 Sync all notes to phone</button>
   <span id="sync-result" class="muted"></span>
 </div>
+
+<div class="card-box">
+  <h3>Backups</h3>
+  <p class="muted">A backup of your database (search index, categories, links —
+  everything except the Markdown notes themselves, which are already safe in
+  your vault folder) is taken automatically every time the app starts. Use
+  this before a big cleanup, or any time you want extra peace of mind.</p>
+  <div class="actions-row">
+    <button class="btn primary" onclick="makeBackup(this)">💾 Back up now</button>
+    <button class="btn" onclick="fetch('/api/open-backups', {method:'POST'})">📂 Open backups folder</button>
+    <span id="backup-result" class="muted"></span>
+  </div>
+  <div id="backup-list" class="small muted" style="margin-top:10px"></div>
+</div>
 {% endblock %}
 {% block scripts %}
 <script>
@@ -73,5 +87,27 @@ async function syncPhone(btn) {
     btn.disabled = false;
   }
 }
+async function loadBackups() {
+  const r = await fetch('/api/backups');
+  const data = await r.json();
+  const list = document.getElementById('backup-list');
+  if (!data.backups.length) { list.textContent = 'No backups yet.'; return; }
+  list.innerHTML = 'Most recent: ' + data.backups.slice(0, 5).map(b =>
+    `${b.created} (${b.size_kb} KB)`).join(' · ');
+}
+async function makeBackup(btn) {
+  const out = document.getElementById('backup-result');
+  btn.disabled = true;
+  out.textContent = 'Backing up…';
+  try {
+    const r = await fetch('/api/backup', {method: 'POST'});
+    const data = await r.json();
+    out.textContent = (data.ok ? '✓ ' : '✗ ') + (data.message || data.error);
+    if (data.ok) loadBackups();
+  } finally {
+    btn.disabled = false;
+  }
+}
+loadBackups();
 </script>
 {% endblock %}

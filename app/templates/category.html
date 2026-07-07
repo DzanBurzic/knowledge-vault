@@ -29,6 +29,8 @@
 {% endif %}
 {% for card in cards %}
 <div class="card-box result-card">
+  <label class="bulk-select"><input type="checkbox" class="bulk-check" value="{{ card.id }}"
+    aria-label="Select {{ card.title }} for bulk actions"></label>
   <a href="/card/{{ card.id }}"><strong>{{ card.title }}</strong></a>
   {% if card.status == 'done' %}<span class="badge">done</span>{% endif %}
   <div class="muted small">{{ card.platform }} · {{ card.created_at[:10] }} · {{ card.extraction_status }}</div>

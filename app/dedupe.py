@@ -75,6 +75,53 @@ def merge_into_existing(conn, vault, existing_item_id: int, original_url: str,
         notes.write_item_note(conn, existing_item_id, vault)
 
 
+MAYBE_RELATED_FLOOR = 0.60
+
+
+def maybe_related(conn, item_id: int, cfg: dict, limit: int = 5) -> list[dict]:
+    """Notes similar enough to be worth a look but below the auto-link
+    threshold — surfaced for the user to confirm manually, never stored
+    automatically (that's what keeps ## Related Notes free of false positives)."""
+    row = conn.execute("SELECT vector FROM embeddings WHERE item_id = ?", (item_id,)).fetchone()
+    if not row:
+        return []
+    vector = np.frombuffer(row["vector"], dtype=np.float32)
+    ceiling = float(cfg.get("related_threshold", 0.75))
+    if ceiling <= MAYBE_RELATED_FLOOR:
+        return []
+    already = {
+        r["other"] for r in conn.execute(
+            "SELECT CASE WHEN item_id = :id THEN related_item_id ELSE item_id END AS other "
+            "FROM related_links WHERE item_id = :id OR related_item_id = :id", {"id": item_id},
+        )
+    }
+    out = []
+    for other_id, sim in similarities(conn, vector, exclude_item_id=item_id):
+        if sim < MAYBE_RELATED_FLOOR:
+            break  # similarities() is sorted descending — nothing further qualifies
+        if sim >= ceiling or other_id in already:
+            continue
+        other = conn.execute("SELECT title FROM items WHERE id = ?", (other_id,)).fetchone()
+        if other:
+            out.append({"id": other_id, "title": other["title"], "similarity": round(sim, 3)})
+        if len(out) >= limit:
+            break
+    return out
+
+
+def pairwise_similarity(conn, item_a: int, item_b: int) -> float | None:
+    """Cosine similarity between two stored embeddings, or None if either is missing."""
+    rows = {
+        r["item_id"]: np.frombuffer(r["vector"], dtype=np.float32)
+        for r in conn.execute(
+            "SELECT item_id, vector FROM embeddings WHERE item_id IN (?, ?)", (item_a, item_b)
+        )
+    }
+    if item_a not in rows or item_b not in rows:
+        return None
+    return float(rows[item_a] @ rows[item_b])
+
+
 def link_related(conn, vault, item_id: int, related: list[tuple[int, float]]) -> None:
     """R42/R44: up to 3 bidirectional Related Notes wikilinks."""
     for other_id, sim in related[:3]:

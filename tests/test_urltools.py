@@ -1,0 +1,57 @@
+from app.urltools import detect_platform, extract_first_url, normalize_url
+
+
+def test_detect_platform_youtube_video():
+    assert detect_platform("https://www.youtube.com/watch?v=abc123") == ("youtube", "video")
+
+
+def test_detect_platform_youtube_short():
+    assert detect_platform("https://www.youtube.com/shorts/abc123") == ("youtube", "short")
+
+
+def test_detect_platform_instagram_reel():
+    platform, kind = detect_platform("https://www.instagram.com/reel/XYZ/")
+    assert (platform, kind) == ("instagram", "reel")
+
+
+def test_detect_platform_tiktok():
+    assert detect_platform("https://www.tiktok.com/@user/video/123")[0] == "tiktok"
+
+
+def test_detect_platform_unknown_is_web_article():
+    assert detect_platform("https://example.com/some/article") == ("web", "article")
+
+
+def test_normalize_url_strips_tracking_params():
+    a = normalize_url("https://example.com/article?utm_source=ig&id=5")
+    b = normalize_url("https://example.com/article?id=5")
+    assert a == b
+
+
+def test_normalize_url_youtube_canonical_id():
+    a = normalize_url("https://youtu.be/abc123?t=42")
+    b = normalize_url("https://www.youtube.com/watch?v=abc123&list=PLxyz")
+    assert a == b == "https://www.youtube.com/watch?v=abc123"
+
+
+def test_normalize_url_instagram_reel_ignores_query():
+    a = normalize_url("https://www.instagram.com/reel/DaYjBh1ABaZ/?igsh=abc123")
+    b = normalize_url("https://www.instagram.com/reel/DaYjBh1ABaZ/")
+    assert a == b
+
+
+def test_normalize_url_lowercases_host():
+    assert normalize_url("https://Example.COM/path") == "https://example.com/path"
+
+
+def test_extract_first_url_from_text():
+    text = "check this out https://example.com/x nice"
+    assert extract_first_url(text) == "https://example.com/x"
+
+
+def test_extract_first_url_none_when_absent():
+    assert extract_first_url("just some text, no link") is None
+
+
+def test_extract_first_url_strips_trailing_punctuation():
+    assert extract_first_url("see https://example.com/x.") == "https://example.com/x"

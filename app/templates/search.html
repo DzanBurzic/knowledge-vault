@@ -50,6 +50,7 @@ form.addEventListener('submit', async (e) => {
   for (const [k, v] of fd.entries()) if (v) params.append(k, v);
   const out = document.getElementById('search-results');
   out.innerHTML = '<p class="muted">Searching…</p>';
+  clearBulkSelection(); // old checkboxes are about to be replaced
   const r = await fetch('/api/search?' + params.toString());
   const data = await r.json();
   if (!data.ok) { out.innerHTML = `<p class="error-text">${data.error}</p>`; return; }
@@ -59,6 +60,8 @@ form.addEventListener('submit', async (e) => {
   }
   out.innerHTML = data.results.map(res => `
     <div class="card-box result-card">
+      <label class="bulk-select"><input type="checkbox" class="bulk-check" value="${res.id}"
+        aria-label="Select ${escapeHtml(res.title)} for bulk actions"></label>
       <a href="/card/${res.id}"><strong>${escapeHtml(res.title)}</strong></a>
       ${res.matched_in_transcript ? '<span class="badge badge-info">matched in transcript</span>' : ''}
       ${res.status === 'done' ? '<span class="badge">done</span>' : ''}
