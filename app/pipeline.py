@@ -23,6 +23,10 @@ def _set_queue(conn, queue_id: int, **fields) -> None:
     cols = ", ".join(f"{k} = ?" for k in fields)
     conn.execute(f"UPDATE queue SET {cols} WHERE id = ?", (*fields.values(), queue_id))
     conn.commit()
+    # Publish terminal events to the phone's "Recently added" feed (R60). Runs
+    # at exactly the points state reaches a terminal value; best-effort only.
+    if fields.get("state") in cloudsync.TERMINAL_EVENT_STATES:
+        cloudsync.publish_event(load_config(), conn, queue_id)
 
 
 def enqueue(conn, url: str | None, shared_text: str | None, source: str,

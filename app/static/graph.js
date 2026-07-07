@@ -15,9 +15,19 @@
   let nodes = [], links = [], byId = {}, neighbors = {};
   let view = { x: 0, y: 0, k: 1 };
   let alpha = 0, running = false;
-  let hover = null, dragNode = null, dragged = false;
+  let hover = null, peek = null, dragNode = null, dragged = false;
   let panning = false, last = { x: 0, y: 0 };
+  let anim = null;
   let dpr = Math.max(1, window.devicePixelRatio || 1);
+
+  const LABEL_BUDGET = 28;
+  function truncateLabel(s) {
+    if (s.length <= LABEL_BUDGET) return s;
+    let cut = s.slice(0, LABEL_BUDGET);
+    const sp = cut.lastIndexOf(" ");
+    if (sp > LABEL_BUDGET * 0.6) cut = cut.slice(0, sp);  // break on a word boundary
+    return cut.replace(/[\s,.;:!?-]+$/, "") + "…";
+  }
 
   // --------------------------------------------------------------- sizing
   function resize() {
@@ -37,6 +47,7 @@
     const inc = archivedToggle.checked ? "1" : "0";
     const r = await fetch("/api/graph?include_archived=" + inc);
     const data = await r.json();
+    peek = null; hover = null;
     byId = {}; neighbors = {};
     nodes = data.nodes.map((n) => {
       const node = Object.assign({}, n, {
@@ -66,8 +77,9 @@
   }
 
   function radius(n) {
-    const base = n.type === "category" ? 6.5 : 3.6;
-    return base + Math.min(7, Math.sqrt(n.deg) * (n.type === "category" ? 2.2 : 1.4));
+    // Category nodes read clearly larger than notes even before zooming (R21).
+    const base = n.type === "category" ? 9 : 3.4;
+    return base + Math.min(8, Math.sqrt(n.deg) * (n.type === "category" ? 2.6 : 1.3));
   }
 
   // --------------------------------------------------------------- physics
@@ -138,12 +150,14 @@
     ctx.clearRect(0, 0, W(), H());
     ctx.setTransform(view.k * dpr, 0, 0, view.k * dpr, view.x * dpr, view.y * dpr);
 
-    const hi = hover ? new Set([hover.id, ...neighbors[hover.id]]) : null;
+    // Peek (tap-to-highlight, persistent) takes precedence over mouse hover.
+    const active = peek || hover;
+    const hi = active ? new Set([active.id, ...neighbors[active.id]]) : null;
 
     // links
     for (const l of links) {
       const s = byId[l.source], t = byId[l.target];
-      const on = hi && (l.source === hover.id || l.target === hover.id);
+      const on = hi && (l.source === active.id || l.target === active.id);
       if (hi && !on) ctx.strokeStyle = "rgba(150,162,214,0.05)";
       else if (on) ctx.strokeStyle = "rgba(180,168,255,0.85)";
       else ctx.strokeStyle = l.kind === "related"
@@ -161,7 +175,7 @@
       if (done) color = "#3a4472";
       else color = n.type === "category" ? "#e9b26a" : "#8b7bff";
       ctx.globalAlpha = dim ? 0.25 : 1;
-      if ((n === hover || (hi && hi.has(n.id))) && !dim) {
+      if ((n === active || (hi && hi.has(n.id))) && !dim) {
         ctx.beginPath(); ctx.arc(n.x, n.y, r + 4 / view.k + 3, 0, 6.2832);
         ctx.fillStyle = n.type === "category" ? "rgba(233,178,106,0.22)" : "rgba(139,123,255,0.22)";
         ctx.fill();
@@ -169,20 +183,30 @@
       ctx.beginPath(); ctx.arc(n.x, n.y, r, 0, 6.2832);
       ctx.fillStyle = color; ctx.fill();
       ctx.lineWidth = 1.2 / view.k; ctx.strokeStyle = "rgba(11,14,28,0.9)"; ctx.stroke();
+      // Category nodes carry an outer ring so they read as anchors (R21).
+      if (n.type === "category") {
+        ctx.beginPath(); ctx.arc(n.x, n.y, r + 3.5 / view.k, 0, 6.2832);
+        ctx.lineWidth = 1.6 / view.k;
+        ctx.strokeStyle = done ? "rgba(58,68,114,0.9)" : "rgba(233,178,106,0.55)";
+        ctx.stroke();
+      }
       ctx.globalAlpha = 1;
     }
 
-    // labels — categories always; notes when zoomed in or highlighted
+    // labels — categories always; notes when zoomed in, peeked or highlighted
     ctx.textAlign = "center"; ctx.textBaseline = "top";
     for (const n of nodes) {
       const isCat = n.type === "category";
-      const show = isCat || view.k > 1.15 || (hover && (n === hover || neighbors[hover.id].has(n.id)));
+      const isActive = n === active;
+      const show = isCat || view.k > 1.15 || isActive ||
+        (active && neighbors[active.id].has(n.id));
       if (!show) continue;
       if (hi && !hi.has(n.id) && view.k <= 1.15 && !isCat) continue;
       const r = radius(n);
       const size = (isCat ? 12 : 10.5) / view.k;
       ctx.font = (isCat ? "600 " : "") + size + "px system-ui, sans-serif";
-      const label = n.label.length > 34 ? n.label.slice(0, 33) + "…" : n.label;
+      // The peeked node shows its full, untruncated label (R24); others clip.
+      const label = isActive ? n.label : truncateLabel(n.label);
       ctx.globalAlpha = hi && !hi.has(n.id) ? 0.2 : (isCat ? 0.95 : 0.8);
       ctx.fillStyle = "#0b0e1c";
       ctx.lineWidth = 3 / view.k; ctx.strokeStyle = "rgba(11,14,28,0.85)";
@@ -234,19 +258,41 @@
   });
 
   function endPointer() {
-    if (dragNode && !dragged) open(dragNode);
+    if (!dragged) {
+      if (dragNode) tapNode(dragNode);   // tap a node → peek / commit (R24)
+      else tapNode(null);                // tap empty canvas → clear peek (R24)
+    }
     dragNode = null; panning = false; canvas.classList.remove("grabbing");
   }
   canvas.addEventListener("pointerup", endPointer);
   canvas.addEventListener("pointercancel", endPointer);
 
-  canvas.addEventListener("click", (e) => {
-    if (dragged) return;
-    const p = pos(e); const n = nodeAt(p.x, p.y);
-    if (n) open(n);
-  });
+  // Two-step tap: first tap peeks (center/zoom + highlight, no navigation),
+  // a second tap on the same node commits (opens/filters); a different node
+  // switches the peek; empty canvas clears it (R24).
+  function tapNode(n) {
+    if (!n) { if (peek) { peek = null; render(); } return; }
+    if (peek && peek.id === n.id) { commit(n); return; }
+    peek = n;
+    animateTo(n.x, n.y, Math.max(view.k, 1.6));
+    render();
+  }
+  function commit(n) { if (n && n.url) window.location.href = n.url; }
 
-  function open(n) { if (n && n.url) window.location.href = n.url; }
+  function animateTo(wx, wy, k) {
+    const tx = W() / 2 - wx * k, ty = H() / 2 - wy * k;
+    if (reduceMotion) { view.x = tx; view.y = ty; view.k = k; render(); return; }
+    if (anim) cancelAnimationFrame(anim);
+    const from = { x: view.x, y: view.y, k: view.k }, t0 = performance.now(), dur = 320;
+    (function frame(t) {
+      const p = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - p, 3);
+      view.x = from.x + (tx - from.x) * e;
+      view.y = from.y + (ty - from.y) * e;
+      view.k = from.k + (k - from.k) * e;
+      render();
+      anim = p < 1 ? requestAnimationFrame(frame) : null;
+    })(performance.now());
+  }
 
   canvas.addEventListener("wheel", (e) => {
     e.preventDefault();
@@ -262,22 +308,17 @@
   // keyboard: focus a node result quickly
   search.addEventListener("input", () => {
     const q = search.value.trim().toLowerCase();
-    if (!q) { hover = null; render(); return; }
+    if (!q) { peek = null; render(); return; }
     const found = nodes.find((n) => n.label.toLowerCase().includes(q));
-    if (found) {
-      hover = found;
-      view.k = Math.max(view.k, 1.4);
-      view.x = W() / 2 - found.x * view.k;
-      view.y = H() / 2 - found.y * view.k;
-      render();
-    }
+    if (found) { peek = found; animateTo(found.x, found.y, Math.max(view.k, 1.5)); render(); }
   });
   search.addEventListener("keydown", (e) => {
-    if (e.key === "Enter" && hover) open(hover);
+    if (e.key === "Enter" && peek) commit(peek);
   });
 
   archivedToggle.addEventListener("change", load);
-  resetBtn.addEventListener("click", () => { hover = null; search.value = ""; fit(); render(); });
+  // Reset re-centers and also clears any active peek (R25).
+  resetBtn.addEventListener("click", () => { peek = null; hover = null; search.value = ""; fit(); render(); });
 
   resize();
   load();

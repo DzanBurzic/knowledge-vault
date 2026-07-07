@@ -59,6 +59,46 @@ def detect_platform(url: str) -> tuple[str, str]:
     return "web", "article"
 
 
+# Human-readable source labels (R18). Keyed by (platform, kind) from
+# detect_platform on the stored URL, falling back to a platform-only label.
+_SOURCE_LABELS = {
+    ("youtube", "video"): "YouTube Video",
+    ("youtube", "short"): "YouTube Short",
+    ("instagram", "reel"): "Instagram Reel",
+    ("instagram", "post"): "Instagram Post",
+    ("tiktok", "video"): "TikTok Video",
+    ("web", "article"): "Article",
+}
+
+_PLATFORM_ONLY_LABELS = {
+    "youtube": "YouTube",
+    "instagram": "Instagram",
+    "tiktok": "TikTok",
+    "web": "Article",
+    "manual": "Pasted text",
+}
+
+
+def source_label(platform: str | None, original_url: str | None) -> str:
+    """Short human label for a note's source (R18).
+
+    Manual/pasted items → "Pasted text". Items with a URL → the (platform, kind)
+    label recovered from the stored URL. A URL-less item falls back to a label
+    derived from `platform` alone; an unknown platform is capitalized as-is.
+    """
+    url = (original_url or "").strip()
+    if url:
+        detected, kind = detect_platform(url)
+        return _SOURCE_LABELS.get(
+            (detected, kind),
+            _PLATFORM_ONLY_LABELS.get(detected, detected.capitalize()),
+        )
+    plat = (platform or "manual").strip().lower()
+    if plat == "manual":
+        return "Pasted text"
+    return _PLATFORM_ONLY_LABELS.get(plat, plat.capitalize())
+
+
 def normalize_url(url: str) -> str:
     """Canonical form used for URL dedupe (R40).
 

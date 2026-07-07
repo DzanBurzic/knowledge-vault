@@ -22,9 +22,12 @@
     extraction: <strong>{{ item.extraction_status }}</strong>
     {% if category %} · 📁 <a href="/category/{{ category.id }}">{{ category.path }}</a>{% endif %}
   </div>
-  {% if item.original_url %}
-  <div class="small"><a href="{{ item.original_url }}" target="_blank">{{ item.original_url }}</a></div>
-  {% endif %}
+  <div class="source-line">
+    <span class="source-label">Source: <strong>{{ source_label }}</strong></span>
+    {% if item.original_url %}
+    <a class="open-original" href="{{ item.original_url }}" target="_blank" rel="noopener">Open original ↗</a>
+    {% endif %}
+  </div>
 </div>
 
 <div class="card-box note-render">
@@ -34,11 +37,20 @@
 {% if dupes %}
 <div class="card-box">
   <h3>All sources that contributed to this note</h3>
-  <ul>
-    <li>{{ item.original_url or 'Pasted text' }} <span class="muted">(original)</span></li>
+  <ul class="source-list">
+    <li>
+      <span class="source-label"><strong>{{ source_label }}</strong></span>
+      {% if item.original_url %}
+      <a class="open-original" href="{{ item.original_url }}" target="_blank" rel="noopener">Open original ↗</a>
+      {% endif %}
+      <span class="muted small">original</span>
+    </li>
     {% for d in dupes %}
-    <li><a href="{{ d.merged_source_url }}" target="_blank">{{ d.merged_source_url }}</a>
-      <span class="muted">merged {{ d.merged_at[:10] }}</span></li>
+    <li>
+      <span class="source-label"><strong>{{ d.source_label }}</strong></span>
+      <a class="open-original" href="{{ d.merged_source_url }}" target="_blank" rel="noopener">Open original ↗</a>
+      <span class="muted small">merged {{ d.merged_at[:10] }}</span>
+    </li>
     {% endfor %}
   </ul>
 </div>

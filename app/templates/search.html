@@ -15,10 +15,13 @@
     <summary>Filters</summary>
     <div class="filter-grid">
       <label>Category
-        <select name="category">
-          <option value="">All</option>
-          {% for c in cats %}<option value="{{ c.path }}">{{ '—' * c.depth }} {{ c.name }}</option>{% endfor %}
-        </select>
+        <div class="cat-picker" id="cat-picker">
+          <button type="button" class="cat-picker-btn" aria-haspopup="listbox" aria-expanded="false">
+            <span class="cp-current">All categories</span><span class="chev" aria-hidden="true">▾</span>
+          </button>
+          <input type="hidden" name="category" value="">
+          <div class="cat-picker-panel" role="listbox" aria-label="Categories"></div>
+        </div>
       </label>
       <label>Platform
         <select name="platform">
@@ -34,7 +37,7 @@
       </label>
       <label>From <input type="date" name="date_from"></label>
       <label>To <input type="date" name="date_to"></label>
-      <label class="toggle"><input type="checkbox" name="include_done" value="1"> Include archived/done</label>
+      <label class="toggle"><input type="checkbox" name="include_done" value="1"> Show done items</label>
     </div>
   </details>
 </form>
@@ -43,32 +46,69 @@
 {% block scripts %}
 <script>
 const form = document.getElementById('search-form');
-form.addEventListener('submit', async (e) => {
-  e.preventDefault();
+
+function tagChips(tags) {
+  tags = tags || [];
+  const shown = tags.slice(0, 3).map(t => `<span class="tag">#${escapeHtml(t)}</span>`);
+  if (tags.length > 3) shown.push(`<span class="tag tag-more">+${tags.length - 3}</span>`);
+  return shown.join('');
+}
+
+function resultCard(res) {
+  const doneBadge = res.status === 'done' ? '<span class="badge">done</span>' : '';
+  const matchBadge = res.matched_in_transcript ? '<span class="badge badge-info">matched in transcript</span>' : '';
+  const doneBtn = res.status === 'done' ? ''
+    : `<button type="button" class="qa-btn qa-done" data-id="${res.id}" aria-label="Mark ${escapeHtml(res.title)} as done" title="Done">✓</button>`;
+  const pointsJson = escapeHtml(JSON.stringify(res.main_points || []));
+  return `
+    <div class="card-box result-card" data-open="/card/${res.id}"
+      data-copy-title="${escapeHtml(res.title)}" data-copy-desc="${escapeHtml(res.short_description || '')}"
+      data-copy-url="${escapeHtml(res.source_url || '')}" data-copy-points='${pointsJson}'>
+      <label class="bulk-select"><input type="checkbox" class="bulk-check" value="${res.id}"
+        aria-label="Select ${escapeHtml(res.title)} for bulk actions"></label>
+      <div class="rc-top">
+        <div class="rc-main">
+          <h3 class="rc-title">${escapeHtml(res.title)}</h3>
+          <div class="rc-meta">${matchBadge}${doneBadge}
+            <span>📁 ${escapeHtml(res.category_path || '—')}</span>
+            <span>${escapeHtml(res.platform || '')}</span>
+            <span>${escapeHtml(res.date || '')}</span>
+          </div>
+        </div>
+        <div class="rc-actions">
+          <a class="qa-btn qa-open" href="/card/${res.id}" aria-label="Open ${escapeHtml(res.title)}" title="Open"
+            onclick="event.stopPropagation()">↗</a>
+          <button type="button" class="qa-btn qa-copy" aria-label="Copy ${escapeHtml(res.title)}" title="Copy">⧉</button>
+          ${doneBtn}
+        </div>
+      </div>
+      ${res.short_description ? `<p class="rc-desc">${escapeHtml(res.short_description)}</p>` : ''}
+      <div class="rc-tags">${tagChips(res.tags)}</div>
+    </div>`;
+}
+
+async function runSearch() {
   const fd = new FormData(form);
   const params = new URLSearchParams();
   for (const [k, v] of fd.entries()) if (v) params.append(k, v);
   const out = document.getElementById('search-results');
   out.innerHTML = '<p class="muted">Searching…</p>';
   clearBulkSelection(); // old checkboxes are about to be replaced
-  const r = await fetch('/api/search?' + params.toString());
-  const data = await r.json();
-  if (!data.ok) { out.innerHTML = `<p class="error-text">${data.error}</p>`; return; }
-  if (!data.results.length) {
-    out.innerHTML = '<div class="empty-state"><p>Nothing found.</p></div>';
-    return;
+  try {
+    const r = await fetch('/api/search?' + params.toString());
+    const data = await r.json();
+    if (!data.ok) { out.innerHTML = `<div class="empty-state"><p class="error-text">${escapeHtml(data.error)}</p></div>`; return; }
+    if (!data.results.length) {
+      out.innerHTML = '<div class="empty-state"><p>Nothing found. Try another search or filter.</p></div>';
+      return;
+    }
+    out.innerHTML = data.results.map(resultCard).join('');
+  } catch (e) {
+    out.innerHTML = '<div class="empty-state"><p class="error-text">Search failed — is the app still running?</p></div>';
   }
-  out.innerHTML = data.results.map(res => `
-    <div class="card-box result-card">
-      <label class="bulk-select"><input type="checkbox" class="bulk-check" value="${res.id}"
-        aria-label="Select ${escapeHtml(res.title)} for bulk actions"></label>
-      <a href="/card/${res.id}"><strong>${escapeHtml(res.title)}</strong></a>
-      ${res.matched_in_transcript ? '<span class="badge badge-info">matched in transcript</span>' : ''}
-      ${res.status === 'done' ? '<span class="badge">done</span>' : ''}
-      <div class="muted small">📁 ${escapeHtml(res.category_path || '—')} · ${res.platform || ''} · ${res.date}</div>
-      <p>${escapeHtml(res.short_description || '')}</p>
-      <div class="tag-row">${(res.tags || []).map(t => `<span class="tag">#${escapeHtml(t)}</span>`).join('')}</div>
-    </div>`).join('');
-});
+}
+
+form.addEventListener('submit', (e) => { e.preventDefault(); runSearch(); });
+initCategoryPicker(document.getElementById('cat-picker'), () => runSearch());
 </script>
 {% endblock %}

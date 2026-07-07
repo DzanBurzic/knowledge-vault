@@ -5,13 +5,14 @@
 <label class="toggle">
   <input type="checkbox" id="include-archived" {% if include_archived %}checked{% endif %}
    onchange="location='/browse?include_archived=' + (this.checked ? 1 : 0)">
-  Include archived / done
+  Show done items
 </label>
 
-{% if not cats %}
+{% set top_cats = cats | selectattr('depth', 'equalto', 0) | list %}
+{% if not top_cats %}
 <div class="empty-state">
   {% if total_items == 0 %}
-  <p>No categories yet — they appear automatically as you save things.</p>
+  <p>No notes yet. Share a reel, article, or video to start building your vault.</p>
   <p><a class="btn primary" href="/add">➕ Add your first link</a></p>
   {% else %}
   <p>No categories to show.</p>
@@ -20,12 +21,12 @@
 {% endif %}
 
 <ul class="cat-tree">
-{% for c in cats %}
-  <li class="depth-{{ c.depth }} {% if c.status == 'archived' %}archived{% endif %}">
+{% for c in top_cats %}
+  <li class="{% if c.status == 'archived' %}archived{% endif %}">
     <a href="/category/{{ c.id }}{% if include_archived %}?include_archived=1{% endif %}">
-      {{ ('&nbsp;&nbsp;&nbsp;&nbsp;' * c.depth) | safe }}📁 {{ c.name }}
+      📁 {{ c.name }}
     </a>
-    <span class="muted">({{ c.note_count }})</span>
+    <span class="muted">({{ c.total_note_count }})</span>
     {% if c.status == 'archived' %}<span class="badge">archived</span>{% endif %}
   </li>
 {% endfor %}

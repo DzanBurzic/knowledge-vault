@@ -10,7 +10,7 @@ background worker, so nothing is lost when the cloud is unreachable.
 
 import requests
 
-from . import db
+from . import db, urltools
 
 
 def configured(cfg: dict) -> bool:
@@ -57,7 +57,8 @@ def build_card_payload(conn, item_id: int) -> dict | None:
         "SELECT path FROM categories WHERE id = ?", (item["category_id"],)
     ).fetchone()
     additional = [
-        r["merged_source_url"]
+        {"url": r["merged_source_url"],
+         "label": urltools.source_label(None, r["merged_source_url"])}
         for r in conn.execute(
             "SELECT merged_source_url FROM duplicate_links WHERE item_id = ? "
             "ORDER BY merged_at", (item_id,),
@@ -79,6 +80,7 @@ def build_card_payload(conn, item_id: int) -> dict | None:
         "category_path": cat["path"] if cat else "",
         "platform": item["platform"] or "manual",
         "source_url": item["original_url"] or "",
+        "source_label": urltools.source_label(item["platform"], item["original_url"]),
         "date_saved": (item["created_at"] or "")[:10],
         "tags": db.unj(item["tags"], []),
         "content_type": item["content_type"] or "other",
@@ -90,6 +92,58 @@ def build_card_payload(conn, item_id: int) -> dict | None:
         "related": related,
         "updated_at": item["updated_at"] or item["created_at"] or "",
     }
+
+
+# --------------------------------------------------------------- events (R60)
+
+# States the phone's "Recently added" tab shows (mirrors PC's home page).
+TERMINAL_EVENT_STATES = ("saved", "merged", "needs_input", "failed")
+
+
+def build_event_payload(conn, queue_id: int) -> dict | None:
+    """Recent-activity event for the phone's "Recently added" tab (R60/R61).
+
+    Carries the same information the PC home page shows: the state badge, the
+    linked card (when one exists), and a plain-language reason for
+    failed/needs_input items (no retry/paste form on phone, R62)."""
+    row = conn.execute(
+        "SELECT q.*, i.title AS item_title, c.path AS item_category "
+        "FROM queue q LEFT JOIN items i ON i.id = q.item_id "
+        "LEFT JOIN categories c ON c.id = i.category_id WHERE q.id = ?",
+        (queue_id,),
+    ).fetchone()
+    if not row:
+        return None
+    return {
+        "id": row["id"],
+        "state": row["state"],
+        "result_kind": row["result_kind"] or "",
+        "item_id": row["item_id"],
+        "item_title": row["item_title"] or "",
+        "item_category": row["item_category"] or "",
+        "source": row["source"] or "",
+        "reason": row["error"] or "",
+        "preview": (row["url"] or (row["shared_text"] or "")[:120] or ""),
+        "updated_at": row["updated_at"] or row["created_at"] or "",
+    }
+
+
+def publish_event(cfg: dict, conn, queue_id: int) -> None:
+    """Best-effort push of one terminal queue event to the phone cloud. Never
+    raises — recent-activity is non-critical and must not stall the pipeline or
+    flip a just-saved item to 'failed'."""
+    try:
+        if not configured(cfg):
+            return
+        payload = build_event_payload(conn, queue_id)
+        if not payload:
+            return
+        requests.post(
+            f"{_base(cfg)}/events/put", params={"token": cfg["inbox_token"]},
+            json=payload, timeout=10,
+        )
+    except Exception:  # noqa: BLE001 — the event feed is strictly best-effort
+        pass  # the card outbox still syncs independently
 
 
 # --------------------------------------------------------------- HTTP

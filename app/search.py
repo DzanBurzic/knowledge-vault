@@ -34,7 +34,8 @@ def _filter_sql(filters: dict):
 
 BASE_SELECT = (
     "SELECT i.id, i.title, i.platform, i.short_description, i.tags, i.status, "
-    "i.content_type, i.created_at, i.extraction_status, c.path AS category_path "
+    "i.content_type, i.created_at, i.extraction_status, i.main_points, "
+    "i.original_url, c.path AS category_path "
     "FROM items i LEFT JOIN categories c ON c.id = i.category_id "
 )
 
@@ -47,6 +48,8 @@ def _row_to_result(row, matched_in_transcript=False, similarity=None) -> dict:
         "platform": row["platform"],
         "date": (row["created_at"] or "")[:10],
         "short_description": row["short_description"],
+        "main_points": db.unj(row["main_points"], []),
+        "source_url": row["original_url"] or "",
         "tags": db.unj(row["tags"], []),
         "status": row["status"],
         "matched_in_transcript": matched_in_transcript,

@@ -47,14 +47,187 @@ async function refreshStatus() {
 refreshStatus();
 setInterval(refreshStatus, 3000);
 
+// ------------------------------------------------------------------ toast
+let toastTimer = null;
+function showToast(msg, isErr) {
+  let t = document.getElementById('toast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'toast'; t.className = 'toast'; t.setAttribute('role', 'status');
+    t.setAttribute('aria-live', 'polite');
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.classList.toggle('toast-err', !!isErr);
+  requestAnimationFrame(() => t.classList.add('show'));
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+// ----------------------------------------------- card quick actions (R12–R14)
+// Plain-text block for the Copy action (R13): title, description, main points,
+// source URL — the same information a person would paste elsewhere.
+function cardCopyText(title, desc, points, url) {
+  const lines = [title || ''];
+  if (desc) lines.push('', desc);
+  if (points && points.length) {
+    lines.push('', 'Main points:');
+    points.forEach((p) =>
+      lines.push('- ' + (p.name || '') + (p.description ? ': ' + p.description : '')));
+  }
+  lines.push('', 'Source: ' + (url || 'Pasted text'));
+  return lines.join('\n');
+}
+
+async function cardCopy(btn) {
+  const card = btn.closest('.result-card');
+  let points = [];
+  try { points = JSON.parse(card.dataset.copyPoints || '[]'); } catch (e) { /* ignore */ }
+  const text = cardCopyText(card.dataset.copyTitle, card.dataset.copyDesc, points,
+                            card.dataset.copyUrl);
+  try {
+    if (!navigator.clipboard) throw new Error('clipboard unavailable');
+    await navigator.clipboard.writeText(text);
+    const prev = btn.textContent;
+    btn.textContent = '✓'; btn.classList.add('done-ok');
+    setTimeout(() => { btn.textContent = prev; btn.classList.remove('done-ok'); }, 1200);
+    showToast('Copied ✓');
+  } catch (e) {
+    showToast("Couldn't copy — try selecting the text instead.", true);
+  }
+}
+
+// Whether the current view is showing done items (search's "include_done"
+// checkbox, or category page's ?include_archived=1) — governs mark vs remove (R14).
+function doneItemsShown() {
+  const cb = document.querySelector('input[name="include_done"]');
+  if (cb) return cb.checked;
+  return new URLSearchParams(location.search).get('include_archived') === '1';
+}
+
+async function cardDone(btn) {
+  const card = btn.closest('.result-card');
+  btn.disabled = true;
+  try {
+    const r = await fetch(`/api/card/${btn.dataset.id}/done`, { method: 'POST' });
+    const data = await r.json();
+    if (!data.ok) { btn.disabled = false; showToast(data.error || 'Could not mark done.', true); return; }
+    bulkSelected.delete(Number(btn.dataset.id));
+    updateBulkBar();
+    // In place, no full page reload (R14). Consistent with the "Show done items"
+    // filter: mark it when done items are visible, remove it when they're hidden.
+    if (doneItemsShown()) {
+      const meta = card.querySelector('.rc-meta');
+      if (meta && !meta.querySelector('.badge')) {
+        const b = document.createElement('span');
+        b.className = 'badge'; b.textContent = 'done';
+        meta.insertBefore(b, meta.firstChild);
+      }
+      btn.remove();
+    } else {
+      card.remove();
+    }
+    showToast('Marked as done ✓');
+  } catch (e) { btn.disabled = false; showToast('Could not mark done.', true); }
+}
+
+// Whole-card click opens the detail; interactive children never trigger it (R12).
+document.addEventListener('click', (e) => {
+  const copyBtn = e.target.closest('.qa-copy');
+  if (copyBtn) { e.preventDefault(); e.stopPropagation(); cardCopy(copyBtn); return; }
+  const doneBtn = e.target.closest('.qa-done');
+  if (doneBtn) { e.preventDefault(); e.stopPropagation(); cardDone(doneBtn); return; }
+  const card = e.target.closest('.result-card');
+  if (card && card.dataset.open && !e.target.closest('button, a, input, label')) {
+    location.href = card.dataset.open;
+  }
+});
+
+// ---------------------------------------------- custom category picker (R1–R5)
+function initCategoryPicker(root, onChange) {
+  const btn = root.querySelector('.cat-picker-btn');
+  const labelEl = root.querySelector('.cp-current');
+  const hidden = root.querySelector('input[type="hidden"]');
+  const panel = root.querySelector('.cat-picker-panel');
+  let selectedPath = hidden.value || '';
+
+  function setSelected(path) {
+    selectedPath = path; hidden.value = path;
+    labelEl.textContent = path || 'All categories';
+    panel.querySelectorAll('.cat-picker-row').forEach((r) =>
+      r.classList.toggle('selected', r.dataset.path === selectedPath));
+  }
+  function open() { panel.classList.add('open'); btn.setAttribute('aria-expanded', 'true'); }
+  function close() { panel.classList.remove('open'); btn.setAttribute('aria-expanded', 'false'); }
+
+  function makeAllRow() {
+    const item = document.createElement('div');
+    const row = document.createElement('div');
+    row.className = 'cat-picker-row'; row.dataset.path = ''; row.setAttribute('role', 'option');
+    row.style.paddingLeft = '10px';
+    row.innerHTML = '<span class="cat-picker-twisty leaf"></span><span class="cp-name">All categories</span>';
+    row.addEventListener('click', () => { setSelected(''); close(); if (onChange) onChange(''); });
+    item.appendChild(row);
+    return item;
+  }
+  function makeNode(cat, childrenOf) {
+    const item = document.createElement('div');
+    const row = document.createElement('div');
+    row.className = 'cat-picker-row'; row.dataset.path = cat.path; row.setAttribute('role', 'option');
+    row.style.paddingLeft = (10 + cat.depth * 16) + 'px';
+    const kids = childrenOf[cat.id] || [];
+    const tw = document.createElement('button');
+    tw.type = 'button';
+    tw.className = 'cat-picker-twisty' + (kids.length ? '' : ' leaf');
+    tw.textContent = '▸';
+    tw.setAttribute('aria-label', 'Expand ' + cat.name);
+    const name = document.createElement('span');
+    name.className = 'cp-name'; name.textContent = cat.name;
+    const count = document.createElement('span');
+    count.className = 'cp-count'; count.textContent = cat.total_note_count;
+    row.append(tw, name, count);
+    const childBox = document.createElement('div');
+    childBox.style.display = 'none';
+    kids.forEach((k) => childBox.appendChild(makeNode(k, childrenOf)));
+    tw.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const opening = childBox.style.display === 'none';
+      childBox.style.display = opening ? 'block' : 'none';
+      tw.classList.toggle('expanded', opening);
+    });
+    row.addEventListener('click', () => { setSelected(cat.path); close(); if (onChange) onChange(cat.path); });
+    item.append(row, childBox);
+    return item;
+  }
+
+  fetch('/api/categories').then((r) => r.json()).then((data) => {
+    const cats = data.categories || [];
+    const childrenOf = { root: [] };
+    cats.forEach((c) => {
+      const key = c.parent_id == null ? 'root' : c.parent_id;
+      (childrenOf[key] = childrenOf[key] || []).push(c);
+    });
+    panel.innerHTML = '';
+    panel.appendChild(makeAllRow());
+    (childrenOf.root || []).forEach((c) => panel.appendChild(makeNode(c, childrenOf)));
+    setSelected(selectedPath);
+  });
+
+  btn.addEventListener('click', () => (panel.classList.contains('open') ? close() : open()));
+  document.addEventListener('click', (e) => { if (!root.contains(e.target)) close(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
+}
+window.initCategoryPicker = initCategoryPicker;
+window.showToast = showToast;
+
 // ------------------------------------------------- two-step confirmation
 function confirmAction(text, onConfirm) {
   const modal = document.getElementById('modal');
   document.getElementById('modal-text').textContent = text;
-  modal.style.display = '';
+  modal.classList.add('open');
   const confirmBtn = document.getElementById('modal-confirm');
   const cancelBtn = document.getElementById('modal-cancel');
-  const close = () => { modal.style.display = 'none'; confirmBtn.onclick = cancelBtn.onclick = null; };
+  const close = () => { modal.classList.remove('open'); confirmBtn.onclick = cancelBtn.onclick = null; };
   confirmBtn.onclick = () => { close(); onConfirm(); };
   cancelBtn.onclick = close;
 }

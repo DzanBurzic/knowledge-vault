@@ -25,17 +25,44 @@
 
 <h3>Notes</h3>
 {% if not cards %}
-<div class="empty-state"><p>No notes in this category{% if not include_archived %} (archived/done ones are hidden){% endif %}.</p></div>
+<div class="empty-state">
+  {% if total_items == 0 %}
+  <p>No notes yet. Share a reel, article, or video to start building your vault.</p>
+  <p><a class="btn primary" href="/add">➕ Add your first link</a></p>
+  {% else %}
+  <p>No notes in this category.</p>
+  {% endif %}
+</div>
 {% endif %}
 {% for card in cards %}
-<div class="card-box result-card">
+<div class="card-box result-card" data-open="/card/{{ card.id }}"
+  data-copy-title="{{ card.title }}" data-copy-desc="{{ card.short_description }}"
+  data-copy-url="{{ card.original_url or '' }}" data-copy-points='{{ card.main_points_list | tojson }}'>
   <label class="bulk-select"><input type="checkbox" class="bulk-check" value="{{ card.id }}"
     aria-label="Select {{ card.title }} for bulk actions"></label>
-  <a href="/card/{{ card.id }}"><strong>{{ card.title }}</strong></a>
-  {% if card.status == 'done' %}<span class="badge">done</span>{% endif %}
-  <div class="muted small">{{ card.platform }} · {{ card.created_at[:10] }} · {{ card.extraction_status }}</div>
-  <p>{{ card.short_description }}</p>
-  <div class="tag-row">{% for t in card.tags_list %}<span class="tag">#{{ t }}</span>{% endfor %}</div>
+  <div class="rc-top">
+    <div class="rc-main">
+      <h3 class="rc-title"><a href="/card/{{ card.id }}">{{ card.title }}</a></h3>
+      <div class="rc-meta">
+        {% if card.status == 'done' %}<span class="badge">done</span>{% endif %}
+        <span>{{ card.platform }}</span><span>{{ card.created_at[:10] }}</span><span>{{ card.extraction_status }}</span>
+      </div>
+    </div>
+    <div class="rc-actions">
+      <a class="qa-btn qa-open" href="/card/{{ card.id }}" aria-label="Open {{ card.title }}"
+        title="Open" onclick="event.stopPropagation()">↗</a>
+      <button type="button" class="qa-btn qa-copy" aria-label="Copy {{ card.title }}" title="Copy">⧉</button>
+      {% if card.status != 'done' %}
+      <button type="button" class="qa-btn qa-done" data-id="{{ card.id }}"
+        aria-label="Mark {{ card.title }} as done" title="Done">✓</button>
+      {% endif %}
+    </div>
+  </div>
+  {% if card.short_description %}<p class="rc-desc">{{ card.short_description }}</p>{% endif %}
+  <div class="rc-tags">
+    {% for t in card.tags_list[:3] %}<span class="tag">#{{ t }}</span>{% endfor %}
+    {% if card.tags_list | length > 3 %}<span class="tag tag-more">+{{ card.tags_list | length - 3 }}</span>{% endif %}
+  </div>
 </div>
 {% endfor %}
 {% endblock %}

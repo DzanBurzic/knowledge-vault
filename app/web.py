@@ -13,7 +13,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from . import (backup, categories, cloudsync, db, dedupe, inbox, lifecycle,
-               notes, ollama_client, pipeline, search)
+               notes, ollama_client, pipeline, search, urltools)
 from .config import load_config, save_config, vault_path
 from .worker import WORKER
 
@@ -44,11 +44,22 @@ def render(request: Request, template: str, **ctx) -> HTMLResponse:
 
 
 def category_tree(conn, include_archived: bool = False):
+    """Categories with their depth and a `total_note_count` (own notes plus
+    every descendant's notes, R8). The existing `note_count` (direct-only)
+    field is preserved for callers that rely on it."""
     where = "" if include_archived else "WHERE status = 'active'"
     rows = conn.execute(
         f"SELECT * FROM categories {where} ORDER BY path"
     ).fetchall()
-    return [dict(r) | {"depth": r["path"].count("/")} for r in rows]
+    cats = [dict(r) | {"depth": r["path"].count("/")} for r in rows]
+    for cat in cats:
+        prefix = cat["path"] + "/"
+        cat["total_note_count"] = sum(
+            other["note_count"]
+            for other in cats
+            if other["path"] == cat["path"] or other["path"].startswith(prefix)
+        )
+    return cats
 
 
 # ------------------------------------------------------------------- pages
@@ -101,10 +112,14 @@ def category_page(request: Request, category_id: int, include_archived: int = 0)
             "SELECT * FROM categories WHERE parent_id = ? ORDER BY name", (category_id,)
         ).fetchall()
         note_count = len(lifecycle.subtree_item_ids(conn, category_id))
+        total_items = conn.execute("SELECT COUNT(*) AS n FROM items").fetchone()["n"]
     return render(request, "category.html", cat=dict(cat),
-                  cards=[dict(c) | {"tags_list": db.unj(c["tags"], [])} for c in cards],
+                  cards=[dict(c) | {"tags_list": db.unj(c["tags"], []),
+                                    "main_points_list": db.unj(c["main_points"], [])}
+                         for c in cards],
                   children=[dict(c) for c in children],
-                  note_count=note_count, include_archived=include_archived)
+                  note_count=note_count, total_items=total_items,
+                  include_archived=include_archived)
 
 
 @app.get("/card/{item_id}", response_class=HTMLResponse)
@@ -140,7 +155,10 @@ def card_page(request: Request, item_id: int):
     return render(request, "card.html", item=dict(item),
                   tags_list=db.unj(item["tags"], []),
                   category=dict(cat) if cat else None,
-                  dupes=[dict(d) for d in dupes], related=[dict(r) for r in related],
+                  source_label=urltools.source_label(item["platform"], item["original_url"]),
+                  dupes=[dict(d) | {"source_label": urltools.source_label(None, d["merged_source_url"])}
+                         for d in dupes],
+                  related=[dict(r) for r in related],
                   maybe=maybe, cats=cats, body_html=body_html,
                   extraction_log=(raw["extraction_log"] if raw else ""))
 
