@@ -52,6 +52,57 @@ def test_write_wrangler_toml_stable_across_reruns(isolated):
     assert first == third  # no accumulating blank lines / duplication
 
 
+def test_find_existing_kv_id_matches_manual_dashboard_naming(monkeypatch):
+    import json as json_mod
+
+    class FakeResult:
+        returncode = 0
+        stderr = ""
+        stdout = json_mod.dumps([
+            {"id": "11111111111111111111111111111111", "title": "INBOX"},
+            {"id": "22222222222222222222222222222222", "title": "unrelated"},
+        ])
+
+    monkeypatch.setattr(cd, "_npx", lambda *a, **k: FakeResult())
+    assert cd.find_existing_kv_id() == "11111111111111111111111111111111"
+
+
+def test_find_existing_kv_id_matches_cli_style_naming(monkeypatch):
+    import json as json_mod
+
+    class FakeResult:
+        returncode = 0
+        stderr = ""
+        stdout = json_mod.dumps([{"id": "33333333333333333333333333333333",
+                                  "title": "knowledge-vault-inbox-INBOX"}])
+
+    monkeypatch.setattr(cd, "_npx", lambda *a, **k: FakeResult())
+    assert cd.find_existing_kv_id() == "33333333333333333333333333333333"
+
+
+def test_find_existing_kv_id_none_when_no_match(monkeypatch):
+    import json as json_mod
+
+    class FakeResult:
+        returncode = 0
+        stderr = ""
+        stdout = json_mod.dumps([{"id": "x", "title": "unrelated"}])
+
+    monkeypatch.setattr(cd, "_npx", lambda *a, **k: FakeResult())
+    assert cd.find_existing_kv_id() is None
+
+
+def test_ensure_kv_namespace_reuses_existing_before_creating(isolated, monkeypatch):
+    cd.write_wrangler_toml()
+    monkeypatch.setattr(cd, "find_existing_kv_id", lambda: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
+    create_calls = []
+    monkeypatch.setattr(cd, "_npx", lambda *a, **k: create_calls.append(a))
+    cd.ensure_kv_namespace()
+    assert create_calls == []  # never tried to create — reused instead
+    text = cd.WRANGLER_TOML.read_text(encoding="utf-8")
+    assert "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" in text
+
+
 def test_ensure_kv_namespace_skips_when_already_bound(isolated, monkeypatch):
     cd.write_wrangler_toml()
     with cd.WRANGLER_TOML.open("a", encoding="utf-8") as f:

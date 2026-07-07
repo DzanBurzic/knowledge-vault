@@ -12,6 +12,7 @@ so a failure here never blocks the rest of setup.
 """
 
 import datetime
+import json
 import os
 import re
 import shutil
@@ -35,6 +36,17 @@ class DeployError(Exception):
     """Carries a plain-language reason; caller falls back to manual setup."""
 
 
+def _npx_exe() -> str:
+    """Full path to npx (with its real extension, e.g. npx.cmd on Windows).
+
+    subprocess.run(["npx", ...]) without shell=True fails to launch it on
+    Windows: npx is a batch-file shim there, and Windows' CreateProcess (what
+    subprocess uses directly) doesn't do the PATHEXT-based .cmd/.bat
+    resolution a shell would — only shutil.which performs that lookup.
+    """
+    return shutil.which("npx") or "npx"
+
+
 def _run(cmd: list[str], **kw) -> subprocess.CompletedProcess:
     timeout = kw.pop("timeout", 120)
     return subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8",
@@ -42,7 +54,7 @@ def _run(cmd: list[str], **kw) -> subprocess.CompletedProcess:
 
 
 def _npx(args: list[str], **kw) -> subprocess.CompletedProcess:
-    return _run(["npx", "--yes", "wrangler@latest", *args], **kw)
+    return _run([_npx_exe(), "--yes", "wrangler@latest", *args], **kw)
 
 
 # --------------------------------------------------------------- prereqs
@@ -83,7 +95,7 @@ def login() -> None:
     print("  tab once it says you're logged in.")
     print()
     try:
-        r = subprocess.run(["npx", "--yes", "wrangler@latest", "login"], timeout=300)
+        r = subprocess.run([_npx_exe(), "--yes", "wrangler@latest", "login"], timeout=300)
     except subprocess.TimeoutExpired as e:
         raise DeployError("The Cloudflare login page timed out.") from e
     except OSError as e:
@@ -113,10 +125,36 @@ def write_wrangler_toml() -> None:
     )
 
 
+def find_existing_kv_id(name_hint: str = "INBOX") -> str | None:
+    """Look for a KV namespace already in the account — e.g. one created by
+    following the old manual walkthrough (which has the user type "INBOX"
+    directly) or by an earlier run of this same automation (which titles it
+    "<worker-name>-INBOX"). Reusing it instead of creating a new, empty one
+    avoids orphaning any card data or queued shares already sitting there."""
+    r = _npx(["kv", "namespace", "list"], timeout=30)
+    if r.returncode != 0:
+        return None
+    try:
+        namespaces = json.loads(r.stdout)
+    except json.JSONDecodeError:
+        return None
+    for ns in namespaces:
+        title = ns.get("title", "")
+        if title == name_hint or title == f"{WORKER_NAME}-{name_hint}" or title.endswith(f"-{name_hint}"):
+            return ns.get("id")
+    return None
+
+
 def ensure_kv_namespace() -> None:
-    """Create the INBOX KV namespace and bind it, unless already bound."""
+    """Bind the INBOX KV namespace — reusing an existing one if found,
+    otherwise creating a new one — unless already bound in wrangler.toml."""
     if WRANGLER_TOML.exists() and "[[kv_namespaces]]" in WRANGLER_TOML.read_text(encoding="utf-8"):
         return  # already provisioned by a previous run
+    existing_id = find_existing_kv_id()
+    if existing_id:
+        with WRANGLER_TOML.open("a", encoding="utf-8") as f:
+            f.write(f'\n[[kv_namespaces]]\nbinding = "INBOX"\nid = "{existing_id}"\n')
+        return
     r = _npx(
         ["kv", "namespace", "create", "INBOX", "--binding", "INBOX", "--update-config"],
         cwd=CLOUDFLARE_DIR,
@@ -137,7 +175,7 @@ def ensure_kv_namespace() -> None:
 def set_token_secret(token: str) -> None:
     try:
         r = subprocess.run(
-            ["npx", "--yes", "wrangler@latest", "secret", "put", "TOKEN"],
+            [_npx_exe(), "--yes", "wrangler@latest", "secret", "put", "TOKEN"],
             cwd=CLOUDFLARE_DIR, input=token, capture_output=True, text=True,
             encoding="utf-8", errors="replace", timeout=60,
         )
