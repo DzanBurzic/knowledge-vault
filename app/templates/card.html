@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}{{ item.title }} — Knowledge Vault{% endblock %}
+{% block content %}
+<p><a href="javascript:history.back()">← Back</a></p>
+
+<div class="card-box">
+  <div class="card-head">
+    <h2>{{ item.title }}</h2>
+    <div>
+      {% if item.status == 'done' %}
+        <span class="badge">done</span>
+      {% else %}
+        <button class="btn" onclick="postAction('/api/card/{{ item.id }}/done', 'Marked as done.')">✅ Done</button>
+      {% endif %}
+      <button class="btn danger" onclick="confirmAction(
+        'Delete \'{{ item.title }}\' — cannot be undone.',
+        () => postAction('/api/card/{{ item.id }}/delete', 'Note deleted.', '/'))">🗑 Delete</button>
+    </div>
+  </div>
+  <div class="muted small">
+    {{ item.platform }} · saved {{ item.created_at[:10] }} ·
+    extraction: <strong>{{ item.extraction_status }}</strong>
+    {% if category %} · 📁 <a href="/category/{{ category.id }}">{{ category.path }}</a>{% endif %}
+  </div>
+  {% if item.original_url %}
+  <div class="small"><a href="{{ item.original_url }}" target="_blank">{{ item.original_url }}</a></div>
+  {% endif %}
+</div>
+
+<div class="card-box note-render">
+  {{ body_html | safe }}
+</div>
+
+{% if dupes %}
+<div class="card-box">
+  <h3>All sources that contributed to this note</h3>
+  <ul>
+    <li>{{ item.original_url or 'Pasted text' }} <span class="muted">(original)</span></li>
+    {% for d in dupes %}
+    <li><a href="{{ d.merged_source_url }}" target="_blank">{{ d.merged_source_url }}</a>
+      <span class="muted">merged {{ d.merged_at[:10] }}</span></li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+
+{% if related %}
+<div class="card-box">
+  <h3>Related notes</h3>
+  <ul>{% for r in related %}<li><a href="/card/{{ r.id }}">{{ r.title }}</a></li>{% endfor %}</ul>
+</div>
+{% endif %}
+
+<div class="card-box">
+  <h3>Edit this card</h3>
+  <form id="edit-form">
+    <label>Title</label>
+    <input name="title" value="{{ item.title }}" required>
+    <label>Category — pick one or type a new path (created immediately)</label>
+    <input name="category" list="cat-list" value="{{ category.path if category else '' }}" required>
+    <datalist id="cat-list">
+      {% for c in cats %}<option value="{{ c.path }}">{% endfor %}
+    </datalist>
+    <label>Tags (comma separated)</label>
+    <input name="tags" value="{{ tags_list | join(', ') }}">
+    <label>Short description</label>
+    <textarea name="short_description" rows="2">{{ item.short_description }}</textarea>
+    <button class="btn primary" type="submit">Save changes</button>
+    <span id="edit-result" class="muted"></span>
+  </form>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+document.getElementById('edit-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const body = new FormData(e.target);
+  const r = await fetch('/api/card/{{ item.id }}/edit', {method: 'POST', body});
+  const data = await r.json();
+  const out = document.getElementById('edit-result');
+  if (data.ok) { location.reload(); } else { out.textContent = data.error || 'Error.'; }
+});
+</script>
+{% endblock %}

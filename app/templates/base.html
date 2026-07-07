@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#0b0e1c">
+<title>{% block title %}Knowledge Vault{% endblock %}</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="brand">
+      <svg width="30" height="30" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+        <circle cx="16" cy="16" r="15" fill="#12172c" stroke="#8b7bff" stroke-opacity="0.4"/>
+        <line x1="16" y1="16" x2="8" y2="9"  stroke="#8b7bff" stroke-opacity="0.5"/>
+        <line x1="16" y1="16" x2="24" y2="11" stroke="#8b7bff" stroke-opacity="0.5"/>
+        <line x1="16" y1="16" x2="10" y2="24" stroke="#8b7bff" stroke-opacity="0.5"/>
+        <line x1="16" y1="16" x2="23" y2="22" stroke="#e9b26a" stroke-opacity="0.5"/>
+        <circle cx="8"  cy="9"  r="2" fill="#8b7bff"/>
+        <circle cx="24" cy="11" r="2" fill="#8b7bff"/>
+        <circle cx="10" cy="24" r="2" fill="#8b7bff"/>
+        <circle cx="23" cy="22" r="2.4" fill="#e9b26a"/>
+        <circle cx="16" cy="16" r="3.2" fill="#b4a8ff"/>
+      </svg>
+      <div>
+        <div class="brand-name">Knowledge Vault</div>
+        <div class="brand-sub">your constellation</div>
+      </div>
+    </div>
+    <nav aria-label="Primary">
+      <a href="/" {% if request.url.path == '/' %}class="active" aria-current="page"{% endif %}><span class="nav-ico" aria-hidden="true">✦</span> <span class="nav-label">Recently added</span></a>
+      <a href="/add" {% if request.url.path == '/add' %}class="active" aria-current="page"{% endif %}><span class="nav-ico" aria-hidden="true">＋</span> <span class="nav-label">Add</span></a>
+      <a href="/browse" {% if request.url.path.startswith('/browse') or request.url.path.startswith('/category') %}class="active" aria-current="page"{% endif %}><span class="nav-ico" aria-hidden="true">◈</span> <span class="nav-label">Browse</span></a>
+      <a href="/graph" {% if request.url.path == '/graph' %}class="active" aria-current="page"{% endif %}><span class="nav-ico" aria-hidden="true">✧</span> <span class="nav-label">Graph</span></a>
+      <a href="/search" {% if request.url.path == '/search' %}class="active" aria-current="page"{% endif %}><span class="nav-ico" aria-hidden="true">⌕</span> <span class="nav-label">Search</span></a>
+      <a href="/settings" {% if request.url.path == '/settings' %}class="active" aria-current="page"{% endif %}><span class="nav-ico" aria-hidden="true">⚙</span> <span class="nav-label">Settings</span></a>
+    </nav>
+    <div class="status-area" id="status-area" aria-live="polite">
+      <h3>Status</h3>
+      <div class="status-row">Queue: <span id="st-queue">…</span></div>
+      <div class="status-row" id="st-current-row" style="display:none">
+        Working on: <span id="st-current"></span>
+        <span class="stage-badge" id="st-stage"></span>
+      </div>
+      <div class="status-row">Ollama: <span id="st-ollama">…</span></div>
+      <div class="status-row">Inbox: <span id="st-inbox">…</span></div>
+      <div class="status-row">Phone library: <span id="st-cloud">…</span></div>
+      <div class="status-row muted">Last poll: <span id="st-poll">never</span></div>
+      <div class="status-warning" id="st-warning" style="display:none"></div>
+    </div>
+  </aside>
+  <main class="content" id="main">
+    {% block content %}{% endblock %}
+  </main>
+</div>
+<div class="modal-backdrop" id="modal" style="display:none" role="dialog" aria-modal="true" aria-labelledby="modal-text">
+  <div class="modal">
+    <p id="modal-text"></p>
+    <div class="modal-buttons">
+      <button class="btn danger" id="modal-confirm">Yes, do it</button>
+      <button class="btn" id="modal-cancel">Cancel</button>
+    </div>
+  </div>
+</div>
+<script src="/static/app.js"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

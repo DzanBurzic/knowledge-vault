@@ -1,0 +1,10 @@
+fastapi
+uvicorn[standard]
+jinja2
+python-multipart
+requests
+numpy
+trafilatura
+youtube-transcript-api
+faster-whisper
+markdown

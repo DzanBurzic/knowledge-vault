@@ -1,0 +1,17 @@
+# Per-install secrets and local state — never share these.
+config.json
+PHONE-SETUP.md
+data/
+*.db
+*.db-shm
+*.db-wal
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# OS cruft
+Thumbs.db
+.DS_Store

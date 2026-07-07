@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Add — Knowledge Vault{% endblock %}
+{% block content %}
+<h2>Add a link or text</h2>
+<form id="add-form" class="card-box">
+  <label for="add-input">Link or text (auto-detected)</label>
+  <textarea id="add-input" name="input" rows="6"
+    placeholder="Paste a link (Instagram, TikTok, YouTube, article…) or any raw text"></textarea>
+  <label for="add-notes">Notes to the AI (optional)</label>
+  <input id="add-notes" name="notes_field" type="text"
+    placeholder="e.g. 'this is about my Japan trip planning'">
+  <button class="btn primary" type="submit">Save to vault</button>
+  <p id="add-result" class="muted"></p>
+</form>
+{% endblock %}
+{% block scripts %}
+<script>
+document.getElementById('add-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const input = document.getElementById('add-input').value;
+  const notes = document.getElementById('add-notes').value;
+  const out = document.getElementById('add-result');
+  const body = new FormData();
+  body.append('input', input);
+  body.append('notes_field', notes);
+  const r = await fetch('/api/add', {method: 'POST', body});
+  const data = await r.json();
+  if (data.ok) {
+    out.textContent = data.detected === 'url'
+      ? '✓ Link queued — it is being processed now. See Recently added.'
+      : '✓ Text queued — it is being processed now. See Recently added.';
+    document.getElementById('add-input').value = '';
+    document.getElementById('add-notes').value = '';
+  } else {
+    out.textContent = data.error || 'Something went wrong.';
+  }
+});
+</script>
+{% endblock %}

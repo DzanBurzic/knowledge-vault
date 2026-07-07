@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}{{ cat.name }} — Knowledge Vault{% endblock %}
+{% block content %}
+<p><a href="/browse{% if include_archived %}?include_archived=1{% endif %}">← All categories</a></p>
+<h2>📁 {{ cat.path }} {% if cat.status == 'archived' %}<span class="badge">archived</span>{% endif %}</h2>
+
+<div class="actions-row">
+  <button class="btn" onclick="confirmAction(
+    'Mark every note in \'{{ cat.name }}\' as Done and move the folder to Archive?',
+    () => postAction('/api/category/{{ cat.id }}/done', 'Category archived.'))">✅ Done (archive category)</button>
+  <button class="btn danger" onclick="confirmAction(
+    'Delete \'{{ cat.name }}\' and the {{ note_count }} note(s) inside — cannot be undone.',
+    () => postAction('/api/category/{{ cat.id }}/delete', 'Category deleted.', '/browse'))">🗑 Delete category</button>
+</div>
+
+{% if children %}
+<h3>Subcategories</h3>
+<ul class="cat-tree">
+{% for c in children %}
+  <li><a href="/category/{{ c.id }}">📁 {{ c.name }}</a> <span class="muted">({{ c.note_count }})</span>
+  {% if c.status == 'archived' %}<span class="badge">archived</span>{% endif %}</li>
+{% endfor %}
+</ul>
+{% endif %}
+
+<h3>Notes</h3>
+{% if not cards %}
+<div class="empty-state"><p>No notes in this category{% if not include_archived %} (archived/done ones are hidden){% endif %}.</p></div>
+{% endif %}
+{% for card in cards %}
+<div class="card-box result-card">
+  <a href="/card/{{ card.id }}"><strong>{{ card.title }}</strong></a>
+  {% if card.status == 'done' %}<span class="badge">done</span>{% endif %}
+  <div class="muted small">{{ card.platform }} · {{ card.created_at[:10] }} · {{ card.extraction_status }}</div>
+  <p>{{ card.short_description }}</p>
+  <div class="tag-row">{% for t in card.tags_list %}<span class="tag">#{{ t }}</span>{% endfor %}</div>
+</div>
+{% endfor %}
+{% endblock %}

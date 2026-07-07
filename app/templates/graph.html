@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Graph — Knowledge Vault{% endblock %}
+{% block content %}
+<p class="eyebrow">Knowledge graph</p>
+<div class="graph-wrap">
+  <canvas class="graph-canvas" id="graph" aria-label="Knowledge graph of your notes and categories"></canvas>
+  <div class="graph-toolbar">
+    <input type="text" id="graph-search" class="graph-search" placeholder="Find a note…"
+      autocomplete="off" spellcheck="false" aria-label="Find a note in the graph">
+    <label class="toggle" style="background:rgba(18,23,44,.85);padding:8px 10px;border-radius:10px;">
+      <input type="checkbox" id="graph-archived"> <span>Archived</span>
+    </label>
+    <button class="btn" id="graph-reset" type="button">Reset view</button>
+    <span class="graph-count" id="graph-count"></span>
+  </div>
+  <div class="graph-legend" aria-hidden="true">
+    <div><span class="dot" style="background:#e9b26a"></span> Category</div>
+    <div><span class="dot" style="background:#8b7bff"></span> Note</div>
+    <div><span class="dot" style="background:#3a4472"></span> Done / archived</div>
+  </div>
+  <div class="graph-hint" aria-hidden="true">scroll = zoom · drag = move · click = open</div>
+  <div id="graph-empty" class="empty-state" style="display:none;position:absolute;inset:24px;">
+    <p>Your graph is empty — nothing saved yet.</p>
+    <p><a class="btn primary" href="/add">Add your first link</a></p>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="/static/graph.js"></script>
+{% endblock %}

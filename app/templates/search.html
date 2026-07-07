@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}Search — Knowledge Vault{% endblock %}
+{% block content %}
+<h2>Search</h2>
+<form id="search-form" class="card-box">
+  <div class="search-row">
+    <input id="q" name="q" type="text" placeholder="Search your vault…" autofocus>
+    <div class="mode-toggle">
+      <label><input type="radio" name="mode" value="keyword" checked> Keyword</label>
+      <label><input type="radio" name="mode" value="semantic"> By meaning</label>
+    </div>
+    <button class="btn primary" type="submit">Search</button>
+  </div>
+  <details class="filters" open>
+    <summary>Filters</summary>
+    <div class="filter-grid">
+      <label>Category
+        <select name="category">
+          <option value="">All</option>
+          {% for c in cats %}<option value="{{ c.path }}">{{ '—' * c.depth }} {{ c.name }}</option>{% endfor %}
+        </select>
+      </label>
+      <label>Platform
+        <select name="platform">
+          <option value="">All</option>
+          {% for p in platforms %}<option value="{{ p }}">{{ p }}</option>{% endfor %}
+        </select>
+      </label>
+      <label>Tag
+        <select name="tag">
+          <option value="">All</option>
+          {% for t in tags %}<option value="{{ t }}">{{ t }}</option>{% endfor %}
+        </select>
+      </label>
+      <label>From <input type="date" name="date_from"></label>
+      <label>To <input type="date" name="date_to"></label>
+      <label class="toggle"><input type="checkbox" name="include_done" value="1"> Include archived/done</label>
+    </div>
+  </details>
+</form>
+<div id="search-results"></div>
+{% endblock %}
+{% block scripts %}
+<script>
+const form = document.getElementById('search-form');
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const fd = new FormData(form);
+  const params = new URLSearchParams();
+  for (const [k, v] of fd.entries()) if (v) params.append(k, v);
+  const out = document.getElementById('search-results');
+  out.innerHTML = '<p class="muted">Searching…</p>';
+  const r = await fetch('/api/search?' + params.toString());
+  const data = await r.json();
+  if (!data.ok) { out.innerHTML = `<p class="error-text">${data.error}</p>`; return; }
+  if (!data.results.length) {
+    out.innerHTML = '<div class="empty-state"><p>Nothing found.</p></div>';
+    return;
+  }
+  out.innerHTML = data.results.map(res => `
+    <div class="card-box result-card">
+      <a href="/card/${res.id}"><strong>${escapeHtml(res.title)}</strong></a>
+      ${res.matched_in_transcript ? '<span class="badge badge-info">matched in transcript</span>' : ''}
+      ${res.status === 'done' ? '<span class="badge">done</span>' : ''}
+      <div class="muted small">📁 ${escapeHtml(res.category_path || '—')} · ${res.platform || ''} · ${res.date}</div>
+      <p>${escapeHtml(res.short_description || '')}</p>
+      <div class="tag-row">${(res.tags || []).map(t => `<span class="tag">#${escapeHtml(t)}</span>`).join('')}</div>
+    </div>`).join('');
+});
+</script>
+{% endblock %}
