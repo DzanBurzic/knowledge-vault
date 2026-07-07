@@ -134,11 +134,11 @@ def ensure_token(cfg: dict) -> dict:
     return cfg
 
 
-PHONE_GUIDE = """
-=== Step 5: Phone setup (one time, ~10 minutes) ===
+PHONE_GUIDE_MANUAL = """
+=== Step 5: Phone inbox (Cloudflare) — manual setup, ~10 minutes ===
 
-This connects your Android phone so sharing a reel takes one tap, even when
-the PC is off. Everything below is free.
+Automatic setup didn't finish (see the warning above), so here's the manual
+walkthrough. Everything below is free.
 
 PART A — Create the cloud inbox (on this PC, in your browser)
   1. Go to https://dash.cloudflare.com and sign up (free) or log in.
@@ -170,10 +170,21 @@ PART C — Add the secret token
         (it is shown on the worker's page, ends in .workers.dev)
         Inbox secret token: (already filled in — leave as is)
      Click "Save settings", then "Test inbox" — it should say reachable.
+{phone_part}"""
 
+PHONE_GUIDE_AUTO = """
+=== Step 5: Phone inbox (Cloudflare) — done automatically ===
+
+Your phone inbox is live at:
+    {inbox_url}
+
+Just the phone side is left:
+{phone_part}"""
+
+PHONE_PART = """
 PART D — Install the app on your phone
   1. On your Android phone, open Chrome and go to:
-        https://<your-worker-name>.<your-subdomain>.workers.dev/?token={token}
+        {inbox_url}/?token={token}
      (type it once — the page remembers the token afterwards)
   2. Tap the Chrome menu (three dots, top right) →  "Add to Home screen"
      → "Install". Confirm.
@@ -196,17 +207,44 @@ PART E — View your notes on the phone
   are stored in your Cloudflare cloud so the phone can show them even when the PC
   is off. Your transcripts and raw text never leave the PC.
 
-  ALREADY SET THIS UP BEFORE? The Worker code changed to add the Library view —
-  redo PART A step 5 (paste the new worker.js and Deploy). Your KV namespace and
-  token stay as they are; nothing else needs redoing.
+  ALREADY SET THIS UP BEFORE? Rerunning setup redeploys the worker code (so it
+  picks up updates) but reuses your existing storage and token — nothing else
+  needs redoing.
 """
 
 
-def print_phone_guide(cfg: dict):
-    guide = PHONE_GUIDE.format(
-        worker_file=APP_DIR / "cloudflare" / "worker.js",
-        token=cfg["inbox_token"],
-    )
+def try_automated_cloud_setup(cfg: dict) -> tuple[bool, dict]:
+    """Deploy the phone-inbox Worker via `wrangler` with zero dashboard
+    clicking. Never raises — any failure falls back to the manual guide so
+    setup always completes."""
+    step("Step 5a: Phone inbox — trying automatic setup")
+    if cfg.get("inbox_url"):
+        print(OK + f"Already deployed: {cfg['inbox_url']}")
+        print("        (redeploying to pick up any worker.js updates...)")
+    import cloudflare_deploy
+    try:
+        url = cloudflare_deploy.run(cfg["inbox_token"])
+    except cloudflare_deploy.DeployError as e:
+        print(WARN + f"Automatic setup didn't finish: {e}")
+        return False, cfg
+    except Exception as e:  # noqa: BLE001 — must never crash the rest of setup
+        print(WARN + f"Automatic setup hit an unexpected error: {e}")
+        return False, cfg
+    from app.config import load_config, save_config
+    save_config({"inbox_url": url})
+    print(OK + f"Phone inbox deployed automatically: {url}")
+    return True, load_config()
+
+
+def print_phone_guide(cfg: dict, auto_ok: bool):
+    phone_part = PHONE_PART.format(inbox_url=cfg.get("inbox_url", ""), token=cfg["inbox_token"])
+    if auto_ok:
+        guide = PHONE_GUIDE_AUTO.format(inbox_url=cfg["inbox_url"], phone_part=phone_part)
+    else:
+        guide = PHONE_GUIDE_MANUAL.format(
+            worker_file=APP_DIR / "cloudflare" / "worker.js",
+            token=cfg["inbox_token"], phone_part=phone_part,
+        )
     print(guide)
     guide_path = APP_DIR / "PHONE-SETUP.md"
     guide_path.write_text(guide, encoding="utf-8")
@@ -245,7 +283,8 @@ def main():
     check_tools()
     vault_ok = create_vault_and_db(cfg)
     cfg = ensure_token(cfg)
-    print_phone_guide(cfg)
+    auto_ok, cfg = try_automated_cloud_setup(cfg)
+    print_phone_guide(cfg, auto_ok)
     offer_autostart()
     print("\n" + "=" * 40)
     if ollama_ok and vault_ok:

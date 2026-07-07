@@ -33,8 +33,11 @@ No coding knowledge needed — everything below is a double-click.
 1. Click the green **Code** button at the top of this page → **Download ZIP**.
 2. Extract the ZIP anywhere (e.g. your Desktop).
 3. Open the extracted folder and double-click **`Setup Knowledge Vault.bat`**.
-   Follow what it prints — it installs everything needed (including the free
-   local AI, [Ollama](https://ollama.com)) and creates your vault folder.
+   Follow what it prints — it installs everything needed (the free local AI
+   [Ollama](https://ollama.com), Node.js, your vault folder) and deploys your
+   phone inbox automatically. The only thing it can't do for you is log you
+   into your own free Cloudflare account — a browser tab opens for that one
+   step, then setup continues on its own.
 4. Double-click **`Start Knowledge Vault.bat`**. A dashboard opens in your
    browser at `http://localhost:8765` — you're ready to save your first link.
 
@@ -57,11 +60,14 @@ Open that folder in Obsidian any time to browse your notes directly.
   time the app starts (Settings → Backups also has a manual "Back up now").
   Your Markdown notes are already safe in the vault folder; this covers the
   search index, categories, and links that only live in the database.
-- **Phone capture (optional)** — after first setup, open the file
-  `PHONE-SETUP.md` that appears in this folder. It walks you through a free,
-  10-minute setup (a Cloudflare account) so you can share a reel from your
-  phone with one tap, even while your PC is off — it'll be waiting for you
-  next time you turn the PC on.
+- **Phone capture (optional)** — setup deploys your phone inbox automatically
+  (you only approve a Cloudflare login popup, nothing to click through). Once
+  that's done, open the file `PHONE-SETUP.md` that appears in this folder for
+  the last step: installing the app on your phone, so you can share a reel
+  with one tap, even while your PC is off — it'll be waiting for you next
+  time you turn the PC on. If the automatic part can't finish (e.g. no
+  internet, or you'd rather not install Node.js), that same file has a
+  manual walkthrough instead.
 
 ## Privacy
 
@@ -79,5 +85,8 @@ somewhere to wait until your PC turns on) and the pages you ask it to fetch.
 - **Port already in use** → close any other copy of Knowledge Vault that
   might already be running, or change `"port"` in `config.json` (created
   after first setup) and restart.
+- **Automatic phone inbox setup didn't finish** → setup prints why and falls
+  back to a manual walkthrough in `PHONE-SETUP.md` — nothing else is
+  affected, the rest of the app works either way.
 - Re-running `Setup Knowledge Vault.bat` any time is safe — it only fixes or
   fills in what's missing.

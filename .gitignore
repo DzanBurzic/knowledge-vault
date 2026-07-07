@@ -6,6 +6,13 @@ data/
 *.db-shm
 *.db-wal
 
+# Generated per-install by cloudflare_deploy.py — contains a real,
+# account-specific KV namespace id, not a shared template.
+cloudflare/wrangler.toml
+cloudflare/.wrangler/
+.wrangler/
+node_modules/
+
 # Python
 __pycache__/
 *.pyc
