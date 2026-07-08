@@ -160,6 +160,16 @@ function initCategoryPicker(root, onChange) {
   function open() { panel.classList.add('open'); btn.setAttribute('aria-expanded', 'true'); }
   function close() { panel.classList.remove('open'); btn.setAttribute('aria-expanded', 'false'); }
 
+  // Rows are divs (they contain the expand button, and buttons can't nest),
+  // so give them explicit keyboard support to match the native select they
+  // replaced: focusable, Enter/Space selects.
+  function keyboardable(row) {
+    row.tabIndex = 0;
+    row.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); row.click(); }
+    });
+  }
+
   function makeAllRow() {
     const item = document.createElement('div');
     const row = document.createElement('div');
@@ -167,6 +177,7 @@ function initCategoryPicker(root, onChange) {
     row.style.paddingLeft = '10px';
     row.innerHTML = '<span class="cat-picker-twisty leaf"></span><span class="cp-name">All categories</span>';
     row.addEventListener('click', () => { setSelected(''); close(); if (onChange) onChange(''); });
+    keyboardable(row);
     item.appendChild(row);
     return item;
   }
@@ -196,6 +207,7 @@ function initCategoryPicker(root, onChange) {
       tw.classList.toggle('expanded', opening);
     });
     row.addEventListener('click', () => { setSelected(cat.path); close(); if (onChange) onChange(cat.path); });
+    keyboardable(row);
     item.append(row, childBox);
     return item;
   }

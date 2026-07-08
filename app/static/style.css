@@ -248,10 +248,6 @@ form .btn { margin-top: 14px; }
   font-family: var(--font-mono);
 }
 
-.result-card { transition: border-color var(--ease), transform var(--ease); position: relative; padding-left: 42px; }
-.result-card:hover { border-color: var(--violet-soft); }
-.result-card .small { color: var(--faint); font-family: var(--font-mono); }
-
 .bulk-select {
   position: absolute; top: 18px; left: 16px; width: 20px; height: 20px;
   display: flex; align-items: center; justify-content: center;
@@ -349,7 +345,15 @@ form .btn { margin-top: 14px; }
 
 /* ------------------------------------------------- category picker (R1–R5) */
 
-.cat-picker { position: relative; }
+/* Styled like a <label>, but a plain div: nesting the picker inside a real
+   <label> made label click-forwarding re-toggle the panel on every click of
+   the caption text, so the dropdown could never be closed from there. */
+.filter-field {
+  display: block; margin: 12px 0 5px; font-weight: 500; font-size: 14px;
+  color: var(--text);
+}
+
+.cat-picker { position: relative; margin-top: 5px; }
 .cat-picker-btn {
   width: 100%; display: flex; align-items: center; justify-content: space-between;
   gap: 8px; text-align: left; cursor: pointer;

@@ -14,15 +14,16 @@
   <details class="filters" open>
     <summary>Filters</summary>
     <div class="filter-grid">
-      <label>Category
+      <div class="filter-field">Category
         <div class="cat-picker" id="cat-picker">
-          <button type="button" class="cat-picker-btn" aria-haspopup="listbox" aria-expanded="false">
+          <button type="button" class="cat-picker-btn" aria-haspopup="listbox" aria-expanded="false"
+            aria-label="Filter by category">
             <span class="cp-current">All categories</span><span class="chev" aria-hidden="true">▾</span>
           </button>
           <input type="hidden" name="category" value="">
           <div class="cat-picker-panel" role="listbox" aria-label="Categories"></div>
         </div>
-      </label>
+      </div>
       <label>Platform
         <select name="platform">
           <option value="">All</option>

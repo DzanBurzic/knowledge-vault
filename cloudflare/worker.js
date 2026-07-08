@@ -52,11 +52,13 @@ async function listAll(env, prefix) {
 const SAVED_PAGE = `<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#0b0e1c">
 <title>Saved</title>
 <style>
- body{font-family:system-ui;background:#4f46e5;color:#fff;display:flex;
+ body{font-family:system-ui;background:#0b0e1c;color:#e8e9f6;display:flex;
  align-items:center;justify-content:center;height:100vh;margin:0;flex-direction:column}
- .check{font-size:72px}
+ .check{font-size:72px;color:#8b7bff}
 </style></head>
 <body><div class="check">✓</div><h1>Saved</h1>
 <p>It will appear in your library once the PC processes it.</p>
@@ -74,7 +76,7 @@ function page(token) {
 <link rel="manifest" href="/manifest.json${t ? "?token=" + t : ""}">
 <link rel="icon" href="/icon-192.png">
 <style>
- :root{--ink:#0b0e1c;--panel:#12172c;--raised:#1a2140;--line:rgba(150,162,214,0.14);
+ :root{--ink:#0b0e1c;--ink2:#0e1326;--panel:#12172c;--raised:#1a2140;--line:rgba(150,162,214,0.14);
   --text:#e8e9f6;--muted:#969dc4;--faint:#6b7099;--violet:#8b7bff;--violet2:#b4a8ff;
   --amber:#e9b26a;--soft:rgba(139,123,255,0.14);--mono:"Cascadia Mono",ui-monospace,Consolas,monospace}
  *{box-sizing:border-box}
@@ -116,7 +118,7 @@ function page(token) {
  nav.tabbar button.active{color:var(--violet2);font-weight:600}
  #tab-graph{padding:0}
  .graph-holder{position:relative;height:calc(100vh - 66px - env(safe-area-inset-bottom) - 58px)}
- #gcanvas{display:block;width:100%;height:100%;touch-action:none;background:var(--ink-2)}
+ #gcanvas{display:block;width:100%;height:100%;touch-action:none;background:var(--ink2)}
  .gbar{position:absolute;top:10px;left:10px;right:10px;display:flex;gap:8px;pointer-events:none}
  .gbar>*{pointer-events:auto}
  .gbar .icon-btn{background:rgba(18,23,44,0.85)}
@@ -799,8 +801,8 @@ function manifest(token) {
     description: "Capture and browse your Knowledge Vault notes.",
     start_url: "/" + t,
     display: "standalone",
-    background_color: "#f6f7fb",
-    theme_color: "#4f46e5",
+    background_color: "#0b0e1c",
+    theme_color: "#0b0e1c",
     icons: [
       { src: "/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any maskable" },
       { src: "/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any maskable" },
@@ -929,7 +931,16 @@ export default {
         // PC publishes one terminal queue event to the "Recently added" feed (R60).
         if (!tokenOk(request, env)) return new Response("unauthorized", { status: 401 });
         const ev = await request.json();
-        if (ev && ev.id != null) await env.INBOX.put("event:" + ev.id, JSON.stringify(ev));
+        if (ev && ev.id != null) {
+          await env.INBOX.put("event:" + ev.id, JSON.stringify(ev));
+          // Keep the feed bounded: queue ids grow monotonically, so pruning by
+          // numeric id keeps the newest N and stops KV growing forever.
+          const keys = await listAll(env, "event:");
+          if (keys.length > 100) {
+            const ids = keys.map((k) => Number(k.name.slice(6))).sort((a, b) => b - a);
+            for (const id of ids.slice(100)) await env.INBOX.delete("event:" + id);
+          }
+        }
         return Response.json({ ok: true });
       }
     }
