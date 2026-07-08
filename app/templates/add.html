@@ -2,14 +2,16 @@
 {% block title %}Add — Knowledge Vault{% endblock %}
 {% block content %}
 <h2>Add a link or text</h2>
-<form id="add-form" class="card-box">
-  <label for="add-input">Link or text (auto-detected)</label>
-  <textarea id="add-input" name="input" rows="6"
-    placeholder="Paste a link (Instagram, TikTok, YouTube, article…) or any raw text"></textarea>
+<form id="add-form" class="card-box editor-box">
+  <div class="editor-head">
+    <span class="hint">Paste a link (Instagram, TikTok, YouTube, article…) or any raw text — auto-detected</span>
+    <button class="btn primary" type="submit" style="margin-top:0">Save</button>
+  </div>
+  <textarea id="add-input" name="input" rows="7" aria-label="Link or text to save"
+    placeholder="Start typing or paste a link here…"></textarea>
   <label for="add-notes">Notes to the AI (optional)</label>
   <input id="add-notes" name="notes_field" type="text"
     placeholder="e.g. 'this is about my Japan trip planning'">
-  <button class="btn primary" type="submit">Save to vault</button>
   <p id="add-result" class="muted"></p>
 </form>
 {% endblock %}

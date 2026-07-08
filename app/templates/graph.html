@@ -7,16 +7,20 @@
   <div class="graph-toolbar">
     <input type="text" id="graph-search" class="graph-search" placeholder="Find a note…"
       autocomplete="off" spellcheck="false" aria-label="Find a note in the graph">
-    <label class="toggle" style="background:rgba(18,23,44,.85);padding:8px 10px;border-radius:10px;">
+    <label class="toggle" style="background:rgba(21,26,36,.85);padding:8px 10px;border-radius:9px;">
       <input type="checkbox" id="graph-archived"> <span>Archived</span>
     </label>
-    <button class="btn" id="graph-reset" type="button">Reset view</button>
     <span class="graph-count" id="graph-count"></span>
   </div>
   <div class="graph-legend" aria-hidden="true">
     <div><span class="ring"></span> Category</div>
-    <div><span class="dot" style="background:#8b7bff"></span> Note</div>
-    <div><span class="dot" style="background:#3a4472"></span> Done / archived</div>
+    <div><span class="dot" style="background:#4e8ba3"></span> Note</div>
+    <div><span class="dot" style="background:#333d55"></span> Done / archived</div>
+  </div>
+  <div class="graph-cluster" role="group" aria-label="Graph controls">
+    <button id="graph-zoom-in" type="button" aria-label="Zoom in" title="Zoom in">+</button>
+    <button id="graph-zoom-out" type="button" aria-label="Zoom out" title="Zoom out">−</button>
+    <button id="graph-reset" type="button" aria-label="Reset view" title="Reset view">⤢</button>
   </div>
   <div class="graph-hint" aria-hidden="true">Scroll · Drag · Click a node</div>
   <div id="graph-empty" class="empty-state" style="display:none;position:absolute;inset:24px;">

@@ -158,36 +158,44 @@
     for (const l of links) {
       const s = byId[l.source], t = byId[l.target];
       const on = hi && (l.source === active.id || l.target === active.id);
-      if (hi && !on) ctx.strokeStyle = "rgba(150,162,214,0.05)";
-      else if (on) ctx.strokeStyle = "rgba(180,168,255,0.85)";
+      if (hi && !on) ctx.strokeStyle = "rgba(170,182,216,0.05)";
+      else if (on) ctx.strokeStyle = "rgba(169,240,246,0.8)";
       else ctx.strokeStyle = l.kind === "related"
-        ? "rgba(139,123,255,0.28)" : "rgba(150,162,214,0.16)";
+        ? "rgba(103,223,232,0.25)" : "rgba(170,182,216,0.14)";
       ctx.lineWidth = (on ? 1.6 : 0.9) / view.k;
       ctx.beginPath(); ctx.moveTo(s.x, s.y); ctx.lineTo(t.x, t.y); ctx.stroke();
     }
 
-    // nodes
+    // nodes — Stitch palette: steel-teal notes, bright cyan category anchors,
+    // and a soft cyan glow on the active (peeked/hovered) node.
     for (const n of nodes) {
       const r = radius(n);
       const dim = hi && !hi.has(n.id);
       const done = n.status === "done";
       let color;
-      if (done) color = "#3a4472";
-      else color = n.type === "category" ? "#e9b26a" : "#8b7bff";
+      if (done) color = "#333d55";
+      else color = n.type === "category" ? "#67dfe8" : "#4e8ba3";
       ctx.globalAlpha = dim ? 0.25 : 1;
-      if ((n === active || (hi && hi.has(n.id))) && !dim) {
+      if (n === active && !dim) {
+        // glowing hub, like the Stitch graph's highlighted node
+        const glow = ctx.createRadialGradient(n.x, n.y, r, n.x, n.y, r + 16 / view.k);
+        glow.addColorStop(0, "rgba(103,223,232,0.5)");
+        glow.addColorStop(1, "rgba(103,223,232,0)");
+        ctx.beginPath(); ctx.arc(n.x, n.y, r + 16 / view.k, 0, 6.2832);
+        ctx.fillStyle = glow; ctx.fill();
+      } else if (hi && hi.has(n.id) && !dim) {
         ctx.beginPath(); ctx.arc(n.x, n.y, r + 4 / view.k + 3, 0, 6.2832);
-        ctx.fillStyle = n.type === "category" ? "rgba(233,178,106,0.22)" : "rgba(139,123,255,0.22)";
+        ctx.fillStyle = "rgba(103,223,232,0.18)";
         ctx.fill();
       }
       ctx.beginPath(); ctx.arc(n.x, n.y, r, 0, 6.2832);
       ctx.fillStyle = color; ctx.fill();
-      ctx.lineWidth = 1.2 / view.k; ctx.strokeStyle = "rgba(11,14,28,0.9)"; ctx.stroke();
+      ctx.lineWidth = 1.2 / view.k; ctx.strokeStyle = "rgba(13,16,23,0.9)"; ctx.stroke();
       // Category nodes carry an outer ring so they read as anchors (R21).
       if (n.type === "category") {
         ctx.beginPath(); ctx.arc(n.x, n.y, r + 3.5 / view.k, 0, 6.2832);
         ctx.lineWidth = 1.6 / view.k;
-        ctx.strokeStyle = done ? "rgba(58,68,114,0.9)" : "rgba(233,178,106,0.55)";
+        ctx.strokeStyle = done ? "rgba(51,61,85,0.9)" : "rgba(103,223,232,0.5)";
         ctx.stroke();
       }
       ctx.globalAlpha = 1;
@@ -208,10 +216,10 @@
       // The peeked node shows its full, untruncated label (R24); others clip.
       const label = isActive ? n.label : truncateLabel(n.label);
       ctx.globalAlpha = hi && !hi.has(n.id) ? 0.2 : (isCat ? 0.95 : 0.8);
-      ctx.fillStyle = "#0b0e1c";
-      ctx.lineWidth = 3 / view.k; ctx.strokeStyle = "rgba(11,14,28,0.85)";
+      ctx.fillStyle = "#0d1017";
+      ctx.lineWidth = 3 / view.k; ctx.strokeStyle = "rgba(13,16,23,0.85)";
       ctx.strokeText(label, n.x, n.y + r + 3 / view.k);
-      ctx.fillStyle = isCat ? "#f0d7ad" : "#c9ccea";
+      ctx.fillStyle = isCat ? "#bfeff4" : "#c3cadf";
       ctx.fillText(label, n.x, n.y + r + 3 / view.k);
       ctx.globalAlpha = 1;
     }
@@ -319,6 +327,19 @@
   archivedToggle.addEventListener("change", load);
   // Reset re-centers and also clears any active peek (R25).
   resetBtn.addEventListener("click", () => { peek = null; hover = null; search.value = ""; fit(); render(); });
+
+  // Stitch control cluster: zoom around the canvas center.
+  function zoomCenter(factor) {
+    const cx = W() / 2, cy = H() / 2;
+    const k2 = Math.min(6, Math.max(0.12, view.k * factor));
+    view.x = cx - (cx - view.x) * (k2 / view.k);
+    view.y = cy - (cy - view.y) * (k2 / view.k);
+    view.k = k2; render();
+  }
+  const zin = document.getElementById("graph-zoom-in");
+  const zout = document.getElementById("graph-zoom-out");
+  if (zin) zin.addEventListener("click", () => zoomCenter(1.3));
+  if (zout) zout.addEventListener("click", () => zoomCenter(1 / 1.3));
 
   resize();
   load();

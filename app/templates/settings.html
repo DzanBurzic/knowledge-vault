@@ -3,53 +3,74 @@
 {% block content %}
 <h2>Settings</h2>
 <form id="settings-form" class="card-box">
-  <label>Vault folder (your Obsidian vault for Knowledge Vault)</label>
-  <input name="vault_path" value="{{ cfg.vault_path }}">
-  <div class="filter-grid">
-    <label>Chat model <input name="chat_model" value="{{ cfg.chat_model }}"></label>
-    <label>Embedding model <input name="embedding_model" value="{{ cfg.embedding_model }}"></label>
-    <label>Whisper model size <input name="whisper_model" value="{{ cfg.whisper_model }}"></label>
-    <label>Ollama URL <input name="ollama_url" value="{{ cfg.ollama_url }}"></label>
-    <label>Poll interval (seconds) <input name="poll_interval" type="number" min="10" value="{{ cfg.poll_interval }}"></label>
-    <label>Duplicate threshold <input name="duplicate_threshold" type="number" step="0.01" min="0" max="1" value="{{ cfg.duplicate_threshold }}"></label>
-    <label>Related-notes threshold <input name="related_threshold" type="number" step="0.01" min="0" max="1" value="{{ cfg.related_threshold }}"></label>
-    <label>Subcategory birth threshold <input name="subcategory_birth_threshold" type="number" min="1" value="{{ cfg.subcategory_birth_threshold }}"></label>
-    <label>Dashboard port <input name="port" type="number" value="{{ cfg.port }}"></label>
+  <div class="settings-section">
+    <h3><span class="sec-ico" aria-hidden="true">🗄</span> Vault Identity</h3>
+    <label>Vault folder (your Obsidian vault for Knowledge Vault)</label>
+    <input name="vault_path" value="{{ cfg.vault_path }}">
   </div>
-  <label>Phone inbox URL (from the Cloudflare setup)</label>
-  <input name="inbox_url" value="{{ cfg.inbox_url }}" placeholder="https://your-name.workers.dev">
-  <label>Inbox secret token</label>
-  <input name="inbox_token" value="{{ cfg.inbox_token }}">
+
+  <div class="settings-section">
+    <h3><span class="sec-ico" aria-hidden="true">✳</span> AI &amp; Models</h3>
+    <div class="filter-grid">
+      <label>Chat model <input name="chat_model" value="{{ cfg.chat_model }}"></label>
+      <label>Embedding model <input name="embedding_model" value="{{ cfg.embedding_model }}"></label>
+      <label>Whisper model size <input name="whisper_model" value="{{ cfg.whisper_model }}"></label>
+      <label>Ollama URL <input name="ollama_url" value="{{ cfg.ollama_url }}"></label>
+    </div>
+  </div>
+
+  <div class="settings-section">
+    <h3><span class="sec-ico" aria-hidden="true">⚙</span> Processing</h3>
+    <div class="filter-grid">
+      <label>Poll interval (seconds) <input name="poll_interval" type="number" min="10" value="{{ cfg.poll_interval }}"></label>
+      <label>Duplicate threshold <input name="duplicate_threshold" type="number" step="0.01" min="0" max="1" value="{{ cfg.duplicate_threshold }}"></label>
+      <label>Related-notes threshold <input name="related_threshold" type="number" step="0.01" min="0" max="1" value="{{ cfg.related_threshold }}"></label>
+      <label>Subcategory birth threshold <input name="subcategory_birth_threshold" type="number" min="1" value="{{ cfg.subcategory_birth_threshold }}"></label>
+      <label>Dashboard port <input name="port" type="number" value="{{ cfg.port }}"></label>
+    </div>
+  </div>
+
+  <div class="settings-section">
+    <h3><span class="sec-ico" aria-hidden="true">📱</span> Phone &amp; Cloud</h3>
+    <label>Phone inbox URL (from the Cloudflare setup)</label>
+    <input name="inbox_url" value="{{ cfg.inbox_url }}" placeholder="https://your-name.workers.dev">
+    <label>Inbox secret token</label>
+    <input name="inbox_token" value="{{ cfg.inbox_token }}">
+  </div>
+
   <button class="btn primary" type="submit">Save settings</button>
   <span id="settings-result" class="muted"></span>
 </form>
 
-<div class="card-box actions-row">
-  <button class="btn" onclick="testButton('/api/test/ollama', this)">🧪 Test Ollama</button>
-  <button class="btn" onclick="testButton('/api/test/inbox', this)">🧪 Test inbox</button>
-  <button class="btn" onclick="testButton('/api/test/cloud', this)">🧪 Test phone library</button>
-  <button class="btn" onclick="fetch('/api/open-vault', {method:'POST'})">📂 Open vault folder</button>
-  <span id="test-result" class="muted"></span>
+<div class="card-box">
+  <h3><span class="sec-ico" aria-hidden="true">🧪</span> Health checks</h3>
+  <div class="actions-row" style="margin-top:10px">
+    <button class="btn" onclick="testButton('/api/test/ollama', this)">Test Ollama</button>
+    <button class="btn" onclick="testButton('/api/test/inbox', this)">Test inbox</button>
+    <button class="btn" onclick="testButton('/api/test/cloud', this)">Test phone library</button>
+    <button class="btn" onclick="fetch('/api/open-vault', {method:'POST'})">Open vault folder</button>
+    <span id="test-result" class="muted"></span>
+  </div>
 </div>
 
 <div class="card-box">
-  <h3>Phone library</h3>
+  <h3><span class="sec-ico" aria-hidden="true">📲</span> Phone library</h3>
   <p class="muted">Your notes are published to your phone automatically as they're
   created. Use this to (re)send everything — e.g. after setting up the phone,
   or if something looks out of date.</p>
-  <button class="btn primary" onclick="syncPhone(this)">📲 Sync all notes to phone</button>
+  <button class="btn primary" onclick="syncPhone(this)">Sync all notes to phone</button>
   <span id="sync-result" class="muted"></span>
 </div>
 
 <div class="card-box">
-  <h3>Backups</h3>
+  <h3><span class="sec-ico" aria-hidden="true">🛟</span> Backups</h3>
   <p class="muted">A backup of your database (search index, categories, links —
   everything except the Markdown notes themselves, which are already safe in
   your vault folder) is taken automatically every time the app starts. Use
   this before a big cleanup, or any time you want extra peace of mind.</p>
   <div class="actions-row">
-    <button class="btn primary" onclick="makeBackup(this)">💾 Back up now</button>
-    <button class="btn" onclick="fetch('/api/open-backups', {method:'POST'})">📂 Open backups folder</button>
+    <button class="btn primary" onclick="makeBackup(this)">Back up now</button>
+    <button class="btn" onclick="fetch('/api/open-backups', {method:'POST'})">Open backups folder</button>
     <span id="backup-result" class="muted"></span>
   </div>
   <div id="backup-list" class="small muted" style="margin-top:10px"></div>

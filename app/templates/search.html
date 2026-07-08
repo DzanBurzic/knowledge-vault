@@ -3,15 +3,15 @@
 {% block content %}
 <h2>Search</h2>
 <form id="search-form" class="card-box">
-  <div class="search-row">
-    <input id="q" name="q" type="text" placeholder="Search your vault…" autofocus>
+  <div class="search-row palette-input">
+    <input id="q" name="q" type="text" placeholder="Search Knowledge Vault…" autofocus>
     <div class="mode-toggle">
       <label><input type="radio" name="mode" value="keyword" checked> Keyword</label>
       <label><input type="radio" name="mode" value="semantic"> By meaning</label>
     </div>
     <button class="btn primary" type="submit">Search</button>
   </div>
-  <details class="filters" open>
+  <details class="filters">
     <summary>Filters</summary>
     <div class="filter-grid">
       <div class="filter-field">Category
@@ -48,6 +48,8 @@
 <script>
 const form = document.getElementById('search-form');
 
+const KIND_ICONS = { youtube: '▶', instagram: '◉', tiktok: '♪', web: '▤', manual: '✎' };
+
 function tagChips(tags) {
   tags = tags || [];
   const shown = tags.slice(0, 3).map(t => `<span class="tag">#${escapeHtml(t)}</span>`);
@@ -55,14 +57,15 @@ function tagChips(tags) {
   return shown.join('');
 }
 
-function resultCard(res) {
+function resultRow(res) {
   const doneBadge = res.status === 'done' ? '<span class="badge">done</span>' : '';
   const matchBadge = res.matched_in_transcript ? '<span class="badge badge-info">matched in transcript</span>' : '';
   const doneBtn = res.status === 'done' ? ''
     : `<button type="button" class="qa-btn qa-done" data-id="${res.id}" aria-label="Mark ${escapeHtml(res.title)} as done" title="Done">✓</button>`;
   const pointsJson = escapeHtml(JSON.stringify(res.main_points || []));
+  const kind = KIND_ICONS[res.platform] || '▤';
   return `
-    <div class="card-box result-card" data-open="/card/${res.id}"
+    <div class="card-box result-card result-row" data-open="/card/${res.id}"
       data-copy-title="${escapeHtml(res.title)}" data-copy-desc="${escapeHtml(res.short_description || '')}"
       data-copy-url="${escapeHtml(res.source_url || '')}" data-copy-points='${pointsJson}'>
       <label class="bulk-select"><input type="checkbox" class="bulk-check" value="${res.id}"
@@ -70,10 +73,11 @@ function resultCard(res) {
       <div class="rc-top">
         <div class="rc-main">
           <h3 class="rc-title">${escapeHtml(res.title)}</h3>
+          ${res.short_description ? `<p class="rc-desc">${escapeHtml(res.short_description)}</p>` : ''}
           <div class="rc-meta">${matchBadge}${doneBadge}
-            <span>📁 ${escapeHtml(res.category_path || '—')}</span>
-            <span>${escapeHtml(res.platform || '')}</span>
             <span>${escapeHtml(res.date || '')}</span>
+            <span>${escapeHtml(res.category_path || '—')}</span>
+            ${tagChips(res.tags)}
           </div>
         </div>
         <div class="rc-actions">
@@ -81,10 +85,9 @@ function resultCard(res) {
             onclick="event.stopPropagation()">↗</a>
           <button type="button" class="qa-btn qa-copy" aria-label="Copy ${escapeHtml(res.title)}" title="Copy">⧉</button>
           ${doneBtn}
+          <span class="row-kind" aria-hidden="true" title="${escapeHtml(res.platform || '')}">${kind}</span>
         </div>
       </div>
-      ${res.short_description ? `<p class="rc-desc">${escapeHtml(res.short_description)}</p>` : ''}
-      <div class="rc-tags">${tagChips(res.tags)}</div>
     </div>`;
 }
 
@@ -103,7 +106,7 @@ async function runSearch() {
       out.innerHTML = '<div class="empty-state"><p>Nothing found. Try another search or filter.</p></div>';
       return;
     }
-    out.innerHTML = data.results.map(resultCard).join('');
+    out.innerHTML = '<div class="results-panel">' + data.results.map(resultRow).join('') + '</div>';
   } catch (e) {
     out.innerHTML = '<div class="empty-state"><p class="error-text">Search failed — is the app still running?</p></div>';
   }
