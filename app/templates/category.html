@@ -7,10 +7,10 @@
 <div class="actions-row">
   <button class="btn" onclick="confirmAction(
     'Mark every note in \'{{ cat.name }}\' as Done and move the folder to Archive?',
-    () => postAction('/api/category/{{ cat.id }}/done', 'Category archived.'))">✅ Done (archive category)</button>
+    () => postAction('/api/category/{{ cat.id }}/done', 'Category archived.'))"><svg aria-hidden="true"><use href="#ic-check"/></svg> Done (archive category)</button>
   <button class="btn danger" onclick="confirmAction(
     'Delete \'{{ cat.name }}\' and the {{ note_count }} note(s) inside — cannot be undone.',
-    () => postAction('/api/category/{{ cat.id }}/delete', 'Category deleted.', '/browse'))">🗑 Delete category</button>
+    () => postAction('/api/category/{{ cat.id }}/delete', 'Category deleted.', '/browse'))"><svg aria-hidden="true"><use href="#ic-trash"/></svg> Delete category</button>
 </div>
 
 {% if children %}
@@ -34,7 +34,7 @@
 <div class="empty-state">
   {% if total_items == 0 %}
   <p>No notes yet. Share a reel, article, or video to start building your vault.</p>
-  <p><a class="btn primary" href="/add">➕ Add your first link</a></p>
+  <p><a class="btn primary" href="/add">Add your first link</a></p>
   {% else %}
   <p>No notes in this category.</p>
   {% endif %}
@@ -42,26 +42,11 @@
 {% endif %}
 <div class="card-grid">
 {% for card in cards %}
-<div class="card-box result-card" data-open="/card/{{ card.id }}"
-  data-copy-title="{{ card.title }}" data-copy-desc="{{ card.short_description }}"
-  data-copy-url="{{ card.original_url or '' }}" data-copy-points='{{ card.main_points_list | tojson }}'>
+<div class="card-box result-card" data-open="/card/{{ card.id }}">
   <label class="bulk-select"><input type="checkbox" class="bulk-check" value="{{ card.id }}"
     aria-label="Select {{ card.title }} for bulk actions"></label>
-  <div class="rc-top">
-    <div class="rc-main">
-      <h3 class="rc-title"><a href="/card/{{ card.id }}">{{ card.title }}</a></h3>
-      <div class="rc-meta"><span>{{ card.category_path }}</span></div>
-    </div>
-    <div class="rc-actions">
-      <a class="qa-btn qa-open" href="/card/{{ card.id }}" aria-label="Open {{ card.title }}"
-        title="Open" onclick="event.stopPropagation()">↗</a>
-      <button type="button" class="qa-btn qa-copy" aria-label="Copy {{ card.title }}" title="Copy">⧉</button>
-      {% if card.status != 'done' %}
-      <button type="button" class="qa-btn qa-done" data-id="{{ card.id }}"
-        aria-label="Mark {{ card.title }} as done" title="Done">✓</button>
-      {% endif %}
-    </div>
-  </div>
+  <h3 class="rc-title"><a href="/card/{{ card.id }}">{{ card.title }}</a></h3>
+  <div class="rc-meta"><span>{{ card.category_path }}</span></div>
   {% if card.short_description %}<p class="rc-desc">{{ card.short_description }}</p>{% endif %}
 </div>
 {% endfor %}

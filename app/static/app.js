@@ -64,9 +64,8 @@ function showToast(msg, isErr) {
   toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
 }
 
-// ----------------------------------------------- card quick actions (R12–R14)
-// Plain-text block for the Copy action (R13): title, description, main points,
-// source URL — the same information a person would paste elsewhere.
+// Plain-text block for the Copy action on the note page: title, description,
+// main points, source URL — the same information a person would paste elsewhere.
 function cardCopyText(title, desc, points, url) {
   const lines = [title || ''];
   if (desc) lines.push('', desc);
@@ -79,64 +78,8 @@ function cardCopyText(title, desc, points, url) {
   return lines.join('\n');
 }
 
-async function cardCopy(btn) {
-  const card = btn.closest('.result-card');
-  let points = [];
-  try { points = JSON.parse(card.dataset.copyPoints || '[]'); } catch (e) { /* ignore */ }
-  const text = cardCopyText(card.dataset.copyTitle, card.dataset.copyDesc, points,
-                            card.dataset.copyUrl);
-  try {
-    if (!navigator.clipboard) throw new Error('clipboard unavailable');
-    await navigator.clipboard.writeText(text);
-    const prev = btn.textContent;
-    btn.textContent = '✓'; btn.classList.add('done-ok');
-    setTimeout(() => { btn.textContent = prev; btn.classList.remove('done-ok'); }, 1200);
-    showToast('Copied ✓');
-  } catch (e) {
-    showToast("Couldn't copy — try selecting the text instead.", true);
-  }
-}
-
-// Whether the current view is showing done items (search's "include_done"
-// checkbox, or category page's ?include_archived=1) — governs mark vs remove (R14).
-function doneItemsShown() {
-  const cb = document.querySelector('input[name="include_done"]');
-  if (cb) return cb.checked;
-  return new URLSearchParams(location.search).get('include_archived') === '1';
-}
-
-async function cardDone(btn) {
-  const card = btn.closest('.result-card');
-  btn.disabled = true;
-  try {
-    const r = await fetch(`/api/card/${btn.dataset.id}/done`, { method: 'POST' });
-    const data = await r.json();
-    if (!data.ok) { btn.disabled = false; showToast(data.error || 'Could not mark done.', true); return; }
-    bulkSelected.delete(Number(btn.dataset.id));
-    updateBulkBar();
-    // In place, no full page reload (R14). Consistent with the "Show done items"
-    // filter: mark it when done items are visible, remove it when they're hidden.
-    if (doneItemsShown()) {
-      const meta = card.querySelector('.rc-meta');
-      if (meta && !meta.querySelector('.badge')) {
-        const b = document.createElement('span');
-        b.className = 'badge'; b.textContent = 'done';
-        meta.insertBefore(b, meta.firstChild);
-      }
-      btn.remove();
-    } else {
-      card.remove();
-    }
-    showToast('Marked as done ✓');
-  } catch (e) { btn.disabled = false; showToast('Could not mark done.', true); }
-}
-
-// Whole-card click opens the detail; interactive children never trigger it (R12).
+// Whole-card click opens the detail; interactive children never trigger it.
 document.addEventListener('click', (e) => {
-  const copyBtn = e.target.closest('.qa-copy');
-  if (copyBtn) { e.preventDefault(); e.stopPropagation(); cardCopy(copyBtn); return; }
-  const doneBtn = e.target.closest('.qa-done');
-  if (doneBtn) { e.preventDefault(); e.stopPropagation(); cardDone(doneBtn); return; }
   const card = e.target.closest('.result-card');
   if (card && card.dataset.open && !e.target.closest('button, a, input, label')) {
     location.href = card.dataset.open;

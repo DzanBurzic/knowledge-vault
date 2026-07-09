@@ -49,28 +49,13 @@
 const form = document.getElementById('search-form');
 
 function resultRow(res) {
-  const doneBtn = res.status === 'done' ? ''
-    : `<button type="button" class="qa-btn qa-done" data-id="${res.id}" aria-label="Mark ${escapeHtml(res.title)} as done" title="Done">✓</button>`;
-  const pointsJson = escapeHtml(JSON.stringify(res.main_points || []));
   return `
-    <div class="card-box result-card result-row" data-open="/card/${res.id}"
-      data-copy-title="${escapeHtml(res.title)}" data-copy-desc="${escapeHtml(res.short_description || '')}"
-      data-copy-url="${escapeHtml(res.source_url || '')}" data-copy-points='${pointsJson}'>
+    <div class="card-box result-card result-row" data-open="/card/${res.id}">
       <label class="bulk-select"><input type="checkbox" class="bulk-check" value="${res.id}"
         aria-label="Select ${escapeHtml(res.title)} for bulk actions"></label>
-      <div class="rc-top">
-        <div class="rc-main">
-          <h3 class="rc-title">${escapeHtml(res.title)}</h3>
-          <div class="rc-meta"><span>${escapeHtml(res.category_path || '—')}</span></div>
-          ${res.short_description ? `<p class="rc-desc">${escapeHtml(res.short_description)}</p>` : ''}
-        </div>
-        <div class="rc-actions">
-          <a class="qa-btn qa-open" href="/card/${res.id}" aria-label="Open ${escapeHtml(res.title)}" title="Open"
-            onclick="event.stopPropagation()">↗</a>
-          <button type="button" class="qa-btn qa-copy" aria-label="Copy ${escapeHtml(res.title)}" title="Copy">⧉</button>
-          ${doneBtn}
-        </div>
-      </div>
+      <h3 class="rc-title">${escapeHtml(res.title)}</h3>
+      <div class="rc-meta"><span>${escapeHtml(res.category_path || '—')}</span></div>
+      ${res.short_description ? `<p class="rc-desc">${escapeHtml(res.short_description)}</p>` : ''}
     </div>`;
 }
 

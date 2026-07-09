@@ -212,6 +212,7 @@ def card_page(request: Request, item_id: int):
         body_html = md_lib.markdown(body)
     return render(request, "card.html", item=dict(item),
                   tags_list=db.unj(item["tags"], []),
+                  main_points_list=db.unj(item["main_points"], []),
                   category=dict(cat) if cat else None,
                   source_label=urltools.source_label(item["platform"], item["original_url"]),
                   dupes=[dict(d) | {"source_label": urltools.source_label(None, d["merged_source_url"])}

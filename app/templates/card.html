@@ -6,21 +6,22 @@
 <div class="card-box">
   <div class="card-head">
     <h2>{{ item.title }}</h2>
-    <div>
+    <div class="actions-row">
+      <button class="btn" id="copy-note" type="button">Copy</button>
       {% if item.status == 'done' %}
         <span class="badge">done</span>
       {% else %}
-        <button class="btn" onclick="postAction('/api/card/{{ item.id }}/done', 'Marked as done.')">✅ Done</button>
+        <button class="btn" onclick="postAction('/api/card/{{ item.id }}/done', 'Marked as done.')"><svg aria-hidden="true"><use href="#ic-check"/></svg> Done</button>
       {% endif %}
       <button class="btn danger" onclick="confirmAction(
         'Delete \'{{ item.title }}\' — cannot be undone.',
-        () => postAction('/api/card/{{ item.id }}/delete', 'Note deleted.', '/'))">🗑 Delete</button>
+        () => postAction('/api/card/{{ item.id }}/delete', 'Note deleted.', '/'))"><svg aria-hidden="true"><use href="#ic-trash"/></svg> Delete</button>
     </div>
   </div>
   <div class="muted small">
     {{ item.platform }} · saved {{ item.created_at[:10] }} ·
     extraction: <strong>{{ item.extraction_status }}</strong>
-    {% if category %} · 📁 <a href="/category/{{ category.id }}">{{ category.path }}</a>{% endif %}
+    {% if category %} · <a href="/category/{{ category.id }}">{{ category.path }}</a>{% endif %}
   </div>
   <div class="source-line">
     <span class="source-label">Source: <strong>{{ source_label }}</strong></span>
@@ -32,6 +33,28 @@
 
 <div class="card-box note-render">
   {{ body_html | safe }}
+  <div class="note-foot">
+    <button class="btn btn-sm" id="edit-note" type="button" aria-expanded="false"
+      aria-controls="edit-box">Edit</button>
+  </div>
+</div>
+
+<div class="card-box" id="edit-box" hidden>
+  <form id="edit-form">
+    <label>Title</label>
+    <input name="title" value="{{ item.title }}" required>
+    <label>Category — pick one or type a new path (created immediately)</label>
+    <input name="category" list="cat-list" value="{{ category.path if category else '' }}" required>
+    <datalist id="cat-list">
+      {% for c in cats %}<option value="{{ c.path }}">{% endfor %}
+    </datalist>
+    <label>Tags (comma separated)</label>
+    <input name="tags" value="{{ tags_list | join(', ') }}">
+    <label>Short description</label>
+    <textarea name="short_description" rows="2">{{ item.short_description }}</textarea>
+    <button class="btn primary" type="submit">Save changes</button>
+    <span id="edit-result" class="muted"></span>
+  </form>
 </div>
 
 {% if dupes %}
@@ -77,28 +100,38 @@
   </ul>
 </div>
 {% endif %}
-
-<div class="card-box">
-  <h3>Edit this card</h3>
-  <form id="edit-form">
-    <label>Title</label>
-    <input name="title" value="{{ item.title }}" required>
-    <label>Category — pick one or type a new path (created immediately)</label>
-    <input name="category" list="cat-list" value="{{ category.path if category else '' }}" required>
-    <datalist id="cat-list">
-      {% for c in cats %}<option value="{{ c.path }}">{% endfor %}
-    </datalist>
-    <label>Tags (comma separated)</label>
-    <input name="tags" value="{{ tags_list | join(', ') }}">
-    <label>Short description</label>
-    <textarea name="short_description" rows="2">{{ item.short_description }}</textarea>
-    <button class="btn primary" type="submit">Save changes</button>
-    <span id="edit-result" class="muted"></span>
-  </form>
-</div>
 {% endblock %}
 {% block scripts %}
 <script>
+// Edit lives behind a small button at the bottom of the note — no
+// permanently visible form box under the note.
+const editBtn = document.getElementById('edit-note');
+const editBox = document.getElementById('edit-box');
+editBtn.addEventListener('click', () => {
+  editBox.hidden = !editBox.hidden;
+  editBtn.setAttribute('aria-expanded', String(!editBox.hidden));
+  if (!editBox.hidden) {
+    editBox.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    editBox.querySelector('input[name="title"]').focus();
+  }
+});
+
+document.getElementById('copy-note').addEventListener('click', async () => {
+  const text = cardCopyText(
+    {{ item.title | tojson }},
+    {{ (item.short_description or '') | tojson }},
+    {{ main_points_list | tojson }},
+    {{ (item.original_url or '') | tojson }}
+  );
+  try {
+    if (!navigator.clipboard) throw new Error('clipboard unavailable');
+    await navigator.clipboard.writeText(text);
+    showToast('Copied ✓');
+  } catch (e) {
+    showToast("Couldn't copy — try selecting the text instead.", true);
+  }
+});
+
 document.getElementById('edit-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   const body = new FormData(e.target);

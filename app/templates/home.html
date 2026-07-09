@@ -13,7 +13,7 @@
 {% if not events and total_items == 0 %}
 <div class="empty-state">
   <p>Your vault is empty — nothing saved yet.</p>
-  <p><a class="btn primary" href="/add">➕ Add your first link</a></p>
+  <p><a class="btn primary" href="/add">Add your first link</a></p>
   <p class="muted">Or share something from your phone once the phone app is set up.</p>
 </div>
 {% elif not events %}
@@ -43,7 +43,7 @@
     </form>
   {% elif e.state == 'failed' %}
     <p class="error-text small">{{ e.error }}</p>
-    <button class="btn" onclick="retryQueue({{ e.id }})">🔁 Retry</button>
+    <button class="btn" onclick="retryQueue({{ e.id }})">Retry</button>
   {% endif %}
 </div>
 {% endfor %}
