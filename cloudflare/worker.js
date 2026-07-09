@@ -32,7 +32,9 @@ function tokenOk(request, env) {
 function html(body, status = 200) {
   return new Response(body, {
     status,
-    headers: { "content-type": "text/html; charset=utf-8" },
+    // no-store: the page and its inline styles get edited often; never let a
+    // phone browser (or the installed PWA shell) serve a stale cached copy.
+    headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" },
   });
 }
 
@@ -87,12 +89,14 @@ function page(token) {
  *{box-sizing:border-box}
  html{color-scheme:dark}
  body{font-family:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--text);margin:0;
-  background:
+  background-color:var(--ink);
+  background-image:
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.035 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"),
-    radial-gradient(700px 550px at 15% -10%, rgba(180,180,195,0.10), transparent 60%),
-    radial-gradient(650px 500px at 90% 8%, rgba(160,160,175,0.06), transparent 55%),
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260' viewBox='0 0 260 260'%3E%3Cg fill='none' stroke='%23b4b4c3' stroke-opacity='0.045' stroke-width='1'%3E%3Cpath d='M20 40 L90 20 L150 70 L110 130 L40 110 Z'/%3E%3Cpath d='M150 70 L220 100 L240 180'/%3E%3Cpath d='M110 130 L160 200 L100 240'/%3E%3C/g%3E%3Cg fill='%23b4b4c3' fill-opacity='0.07'%3E%3Ccircle cx='20' cy='40' r='1.6'/%3E%3Ccircle cx='90' cy='20' r='1.2'/%3E%3Ccircle cx='150' cy='70' r='1.8'/%3E%3Ccircle cx='110' cy='130' r='1.3'/%3E%3Ccircle cx='40' cy='110' r='1.2'/%3E%3Ccircle cx='220' cy='100' r='1.4'/%3E%3Ccircle cx='240' cy='180' r='1.1'/%3E%3Ccircle cx='160' cy='200' r='1.5'/%3E%3Ccircle cx='100' cy='240' r='1.2'/%3E%3C/g%3E%3C/svg%3E"),
-    var(--ink);
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260' viewBox='0 0 260 260'%3E%3Cg fill='none' stroke='%23b4b4c3' stroke-opacity='0.07' stroke-width='1'%3E%3Cpath d='M20 40 L90 20 L150 70 L110 130 L40 110 Z'/%3E%3Cpath d='M150 70 L220 100 L240 180'/%3E%3Cpath d='M110 130 L160 200 L100 240'/%3E%3C/g%3E%3Cg fill='%23b4b4c3' fill-opacity='0.11'%3E%3Ccircle cx='20' cy='40' r='1.6'/%3E%3Ccircle cx='90' cy='20' r='1.2'/%3E%3Ccircle cx='150' cy='70' r='1.8'/%3E%3Ccircle cx='110' cy='130' r='1.3'/%3E%3Ccircle cx='40' cy='110' r='1.2'/%3E%3Ccircle cx='220' cy='100' r='1.4'/%3E%3Ccircle cx='240' cy='180' r='1.1'/%3E%3Ccircle cx='160' cy='200' r='1.5'/%3E%3Ccircle cx='100' cy='240' r='1.2'/%3E%3C/g%3E%3C/svg%3E"),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260' viewBox='0 0 260 260'%3E%3Cg transform='rotate(180 130 130)'%3E%3Cg fill='none' stroke='%23b4b4c3' stroke-opacity='0.07' stroke-width='1'%3E%3Cpath d='M20 40 L90 20 L150 70 L110 130 L40 110 Z'/%3E%3Cpath d='M150 70 L220 100 L240 180'/%3E%3Cpath d='M110 130 L160 200 L100 240'/%3E%3C/g%3E%3Cg fill='%23b4b4c3' fill-opacity='0.11'%3E%3Ccircle cx='20' cy='40' r='1.6'/%3E%3Ccircle cx='90' cy='20' r='1.2'/%3E%3Ccircle cx='150' cy='70' r='1.8'/%3E%3Ccircle cx='110' cy='130' r='1.3'/%3E%3Ccircle cx='40' cy='110' r='1.2'/%3E%3Ccircle cx='220' cy='100' r='1.4'/%3E%3Ccircle cx='240' cy='180' r='1.1'/%3E%3Ccircle cx='160' cy='200' r='1.5'/%3E%3Ccircle cx='100' cy='240' r='1.2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  background-repeat:repeat,no-repeat,no-repeat;
+  background-position:0 0,top right,bottom left;
+  background-size:200px 200px,280px 280px,280px 280px;
   background-attachment:fixed;
   padding-bottom:calc(72px + env(safe-area-inset-bottom));-webkit-tap-highlight-color:transparent}
  header{padding:14px 16px;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5;
@@ -135,7 +139,9 @@ function page(token) {
   filter:blur(8px);border-radius:10px}
  #tab-graph{padding:0}
  .graph-holder{position:relative;height:calc(100vh - 72px - env(safe-area-inset-bottom) - 58px)}
- #gcanvas{display:block;width:100%;height:100%;touch-action:none;background:var(--ink2)}
+ #gcanvas{display:block;width:100%;height:100%;touch-action:none;background-color:var(--ink2);
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260' viewBox='0 0 260 260'%3E%3Cg fill='none' stroke='%23b4b4c3' stroke-opacity='0.07' stroke-width='1'%3E%3Cpath d='M20 40 L90 20 L150 70 L110 130 L40 110 Z'/%3E%3Cpath d='M150 70 L220 100 L240 180'/%3E%3Cpath d='M110 130 L160 200 L100 240'/%3E%3C/g%3E%3Cg fill='%23b4b4c3' fill-opacity='0.11'%3E%3Ccircle cx='20' cy='40' r='1.6'/%3E%3Ccircle cx='90' cy='20' r='1.2'/%3E%3Ccircle cx='150' cy='70' r='1.8'/%3E%3Ccircle cx='110' cy='130' r='1.3'/%3E%3Ccircle cx='40' cy='110' r='1.2'/%3E%3Ccircle cx='220' cy='100' r='1.4'/%3E%3Ccircle cx='240' cy='180' r='1.1'/%3E%3Ccircle cx='160' cy='200' r='1.5'/%3E%3Ccircle cx='100' cy='240' r='1.2'/%3E%3C/g%3E%3C/svg%3E"),url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260' viewBox='0 0 260 260'%3E%3Cg transform='rotate(180 130 130)'%3E%3Cg fill='none' stroke='%23b4b4c3' stroke-opacity='0.07' stroke-width='1'%3E%3Cpath d='M20 40 L90 20 L150 70 L110 130 L40 110 Z'/%3E%3Cpath d='M150 70 L220 100 L240 180'/%3E%3Cpath d='M110 130 L160 200 L100 240'/%3E%3C/g%3E%3Cg fill='%23b4b4c3' fill-opacity='0.11'%3E%3Ccircle cx='20' cy='40' r='1.6'/%3E%3Ccircle cx='90' cy='20' r='1.2'/%3E%3Ccircle cx='150' cy='70' r='1.8'/%3E%3Ccircle cx='110' cy='130' r='1.3'/%3E%3Ccircle cx='40' cy='110' r='1.2'/%3E%3Ccircle cx='220' cy='100' r='1.4'/%3E%3Ccircle cx='240' cy='180' r='1.1'/%3E%3Ccircle cx='160' cy='200' r='1.5'/%3E%3Ccircle cx='100' cy='240' r='1.2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  background-repeat:no-repeat,no-repeat;background-position:top right,bottom left;background-size:220px 220px,220px 220px}
  .gbar{position:absolute;top:10px;left:10px;right:10px;display:flex;gap:8px;pointer-events:none}
  .gbar>*{pointer-events:auto}
  .gbar .icon-btn{background:rgba(32,35,49,0.85);backdrop-filter:blur(10px)}
@@ -215,11 +221,7 @@ function page(token) {
   margin-bottom:11px;border-left:3px solid var(--line)}
  .event.saved{border-left-color:#5fd39a}.event.merged{border-left-color:#7fb4ff}
  .event.needs_input{border-left-color:#e9b26a}.event.failed{border-left-color:#ff8095}
- .ev-badge{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:600}
- .b-ok{background:rgba(95,211,154,.14);color:#5fd39a}.b-info{background:var(--smoke);color:var(--text)}
- .b-warn{background:rgba(233,178,106,.14);color:#e9b26a}.b-err{background:rgba(255,128,149,.14);color:#ff8095}
- .ev-time{color:var(--faint);font-size:12px;font-family:var(--mono);margin-left:6px}
- .ev-title{font-family:var(--serif);font-weight:550;font-size:16px;margin-top:8px}
+ .ev-title{font-family:var(--serif);font-weight:550;font-size:16px;margin-top:0}
  .ev-reason{color:var(--muted);font-size:13px;margin-top:6px}
  .ev-cat{color:var(--faint);font-size:12px;margin-top:2px}
  .glegend{position:absolute;left:10px;bottom:calc(64px + env(safe-area-inset-bottom));
@@ -393,14 +395,11 @@ const APP_JS = `(function(){
     var list = el('recent-list');
     if(!events.length){ list.innerHTML='<p class="msg">No notes yet. Share a reel, article, or video to start building your vault.</p>'; return; }
     list.innerHTML = events.map(function(e){
-      var badge, cls='';
-      if(e.state==='saved' && e.result_kind==='already_saved'){ badge='<span class="ev-badge b-info">already saved</span>'; cls='saved'; }
-      else if(e.state==='saved'){ badge='<span class="ev-badge b-ok">saved</span>'; cls='saved'; }
-      else if(e.state==='merged'){ badge='<span class="ev-badge b-info">merged</span>'; cls='merged'; }
-      else if(e.state==='needs_input'){ badge='<span class="ev-badge b-warn">needs input</span>'; cls='needs_input'; }
-      else if(e.state==='failed'){ badge='<span class="ev-badge b-err">failed</span>'; cls='failed'; }
-      else { badge='<span class="ev-badge">waiting</span>'; }
-      var time = (e.updated_at||'').slice(0,16).replace('T',' ');
+      var cls='';
+      if(e.state==='saved'){ cls='saved'; }
+      else if(e.state==='merged'){ cls='merged'; }
+      else if(e.state==='needs_input'){ cls='needs_input'; }
+      else if(e.state==='failed'){ cls='failed'; }
       var titleRow;
       if(e.item_id && e.item_title){
         titleRow='<div class="ev-title" onclick="openEventCard('+e.item_id+')" style="cursor:pointer">'+esc(e.item_title)+'</div>'+
@@ -410,7 +409,7 @@ const APP_JS = `(function(){
       }
       var reason = ((e.state==='failed'||e.state==='needs_input') && e.reason) ?
         '<div class="ev-reason">'+esc(e.reason)+' Open the PC dashboard to resolve it.</div>' : '';
-      return '<div class="event '+cls+'"><div>'+badge+'<span class="ev-time">'+esc(time)+'</span></div>'+titleRow+reason+'</div>';
+      return '<div class="event '+cls+'">'+titleRow+reason+'</div>';
     }).join('');
   }
 
@@ -520,18 +519,12 @@ const APP_JS = `(function(){
     return 'Nothing found. Try another search or filter.';
   }
   function cardHtml(c){
-    var tags = (c.tags||[]);
-    var chips = tags.slice(0,3).map(function(t){ return '<span class="tag">#'+esc(t)+'</span>'; });
-    if(tags.length>3) chips.push('<span class="tag tag-more">+'+(tags.length-3)+'</span>');
     var doneBtn = c.status==='done' ? '' :
       '<button class="qa" data-act="done" aria-label="Mark as done" title="Done">✓</button>';
-    // Stitch meta line: "date · #tag1 #tag2" (category/platform live in the filters + detail sheet)
-    var meta = esc(c.date_saved||'')+(chips.length?' · '+chips.join(' '):'');
-    var doneBadge = c.status==='done' ? ' <span class="ev-badge b-info">done</span>' : '';
     return '<div class="card" data-id="'+c.id+'">'+
       '<div class="rc-top"><div class="rc-main">'+
         '<div class="c-title">'+esc(c.title)+'</div>'+
-        '<div class="c-meta">'+meta+doneBadge+'</div></div>'+
+        '<div class="c-meta">'+esc(c.category_path||'')+'</div></div>'+
         '<div class="rc-actions">'+
           '<button class="qa" data-act="open" aria-label="Open" title="Open">↗</button>'+
           '<button class="qa" data-act="copy" aria-label="Copy" title="Copy">⧉</button>'+
@@ -872,7 +865,9 @@ export default {
     if (request.method === "GET") {
       if (path === "/") return html(page(url.searchParams.get("token")));
       if (path === "/app.js")
-        return new Response(APP_JS, { headers: { "content-type": "application/javascript; charset=utf-8" } });
+        return new Response(APP_JS, {
+          headers: { "content-type": "application/javascript; charset=utf-8", "cache-control": "no-store" },
+        });
       if (path === "/manifest.json")
         return new Response(JSON.stringify(manifest(url.searchParams.get("token"))), {
           headers: { "content-type": "application/manifest+json" },

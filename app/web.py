@@ -18,8 +18,20 @@ from .config import load_config, save_config, vault_path
 from .worker import WORKER
 
 TEMPLATES = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
+STATIC_DIR = Path(__file__).parent / "static"
 
 LONE_URL_RE = re.compile(r"^https?://\S+$")
+
+
+def static_version() -> str:
+    """Cache-busting token for /static assets — the newest file mtime among
+    them, so a browser tab left open across a CSS/JS edit fetches the fresh
+    file on next navigation instead of serving a stale cached copy."""
+    try:
+        newest = max(p.stat().st_mtime for p in STATIC_DIR.glob("*") if p.is_file())
+    except ValueError:
+        newest = 0
+    return str(int(newest))
 
 
 @asynccontextmanager
@@ -40,7 +52,52 @@ app.mount("/static", StaticFiles(directory=str(Path(__file__).parent / "static")
 
 def render(request: Request, template: str, **ctx) -> HTMLResponse:
     ctx.setdefault("cfg", load_config())
+    ctx.setdefault("static_v", static_version())
     return TEMPLATES.TemplateResponse(request, template, ctx)
+
+
+# Keyword → icon symbol id (defined as an <svg><symbol> sprite in base.html).
+# Categories are freeform, so we match on words in the name and fall back to a
+# generic folder. Order matters: the first group that matches wins. Short keys
+# (ai, ml, ux) only match as whole words; longer keys match as substrings too.
+_CATEGORY_ICONS = [
+    ("ic-chip", ("ai", "ml", "tech", "technology", "coding", "code", "software",
+                 "developer", "dev", "programming", "computer", "data", "llm",
+                 "hardware", "gadget", "digital")),
+    ("ic-briefcase", ("business", "finance", "money", "invest", "investing",
+                      "market", "marketing", "startup", "entrepreneur", "sales",
+                      "career", "work", "economics")),
+    ("ic-coffee", ("food", "recipe", "recipes", "cook", "cooking", "meal",
+                   "kitchen", "baking", "drink", "coffee", "restaurant", "diet")),
+    ("ic-map", ("travel", "trip", "vacation", "flight", "hotel", "destination",
+                "place", "places", "city", "country", "adventure")),
+    ("ic-heart", ("health", "fitness", "workout", "gym", "exercise", "wellness",
+                  "medical", "nutrition", "yoga", "running", "mental")),
+    ("ic-flask", ("science", "physics", "chemistry", "biology", "space",
+                  "astronomy", "math", "mathematics")),
+    ("ic-book", ("history", "study", "studying", "education", "learning",
+                 "research", "reading", "school", "language", "book", "books",
+                 "philosophy", "writing")),
+    ("ic-image", ("art", "design", "creative", "photography", "photo", "drawing",
+                  "fashion", "architecture")),
+    ("ic-music", ("music", "podcast", "audio", "song", "songs")),
+    ("ic-play", ("video", "film", "movie", "movies", "media", "entertainment",
+                 "youtube", "tv", "gaming", "game", "games")),
+    ("ic-home", ("home", "diy", "house", "garden", "gardening", "interior")),
+    ("ic-tag", ("shopping", "product", "products", "gear", "deals", "review",
+                "reviews")),
+]
+
+
+def category_icon(name: str) -> str:
+    """Pick an icon symbol id for a freeform category name."""
+    low = (name or "").lower()
+    words = set(re.split(r"[^a-z0-9]+", low))
+    for icon, keys in _CATEGORY_ICONS:
+        for key in keys:
+            if key in words or (len(key) > 3 and key in low):
+                return icon
+    return "ic-folder"
 
 
 def category_tree(conn, include_archived: bool = False):
@@ -91,6 +148,7 @@ def browse(request: Request, include_archived: int = 0):
     with db.get_conn() as conn:
         cats = category_tree(conn, include_archived=bool(include_archived))
         total_items = conn.execute("SELECT COUNT(*) AS n FROM items").fetchone()["n"]
+    cats = [c | {"icon": category_icon(c["name"])} for c in cats]
     return render(request, "browse.html", cats=cats,
                   include_archived=include_archived, total_items=total_items)
 
@@ -117,7 +175,7 @@ def category_page(request: Request, category_id: int, include_archived: int = 0)
                   cards=[dict(c) | {"tags_list": db.unj(c["tags"], []),
                                     "main_points_list": db.unj(c["main_points"], [])}
                          for c in cards],
-                  children=[dict(c) for c in children],
+                  children=[dict(c) | {"icon": category_icon(c["name"])} for c in children],
                   note_count=note_count, total_items=total_items,
                   include_archived=include_archived)
 

@@ -1,12 +1,14 @@
 {% extends "base.html" %}
 {% block title %}Browse — Knowledge Vault{% endblock %}
 {% block content %}
-<h2>Browse categories</h2>
-<label class="toggle">
-  <input type="checkbox" id="include-archived" {% if include_archived %}checked{% endif %}
-   onchange="location='/browse?include_archived=' + (this.checked ? 1 : 0)">
-  Show done items
-</label>
+<div class="browse-head">
+  <h2>Browse</h2>
+  <label class="toggle">
+    <input type="checkbox" id="include-archived" {% if include_archived %}checked{% endif %}
+     onchange="location='/browse?include_archived=' + (this.checked ? 1 : 0)">
+    Show done items
+  </label>
+</div>
 
 {% set top_cats = cats | selectattr('depth', 'equalto', 0) | list %}
 {% if not top_cats %}
@@ -18,17 +20,19 @@
   <p>No categories to show.</p>
   {% endif %}
 </div>
-{% endif %}
-
-<ul class="cat-tree">
+{% else %}
+<div class="cat-grid">
 {% for c in top_cats %}
-  <li class="{% if c.status == 'archived' %}archived{% endif %}">
-    <a href="/category/{{ c.id }}{% if include_archived %}?include_archived=1{% endif %}">
-      📁 {{ c.name }}
-    </a>
-    <span class="muted">({{ c.total_note_count }})</span>
+  <a class="cat-tile {% if c.status == 'archived' %}archived{% endif %}"
+     href="/category/{{ c.id }}{% if include_archived %}?include_archived=1{% endif %}">
+    <span class="cat-tile-ico"><svg><use href="#{{ c.icon }}"/></svg></span>
+    <span class="cat-tile-body">
+      <span class="cat-tile-name">{{ c.name }}</span>
+      <span class="cat-tile-count">{{ c.total_note_count }} note{{ '' if c.total_note_count == 1 else 's' }}</span>
+    </span>
     {% if c.status == 'archived' %}<span class="badge">archived</span>{% endif %}
-  </li>
+  </a>
 {% endfor %}
-</ul>
+</div>
+{% endif %}
 {% endblock %}

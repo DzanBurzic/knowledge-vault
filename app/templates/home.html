@@ -25,29 +25,9 @@
 <div class="card-box result-card event-card state-{{ e.state }}"
   {% if e.item_id %}data-open="/card/{{ e.item_id }}"{% endif %}
   data-search="{{ (e.item_title or e.url or e.shared_text or '') ~ ' ' ~ (e.item_category or '') ~ ' ' ~ (e.item_desc or '') }}">
-  <div class="rc-meta">
-    {% if e.state == 'saved' and e.result_kind == 'already_saved' %}
-      <span class="badge badge-info">already saved</span>
-    {% elif e.state == 'saved' %}
-      <span class="badge badge-ok">saved</span>
-    {% elif e.state == 'merged' %}
-      <span class="badge badge-info">merged</span>
-    {% elif e.state == 'needs_input' %}
-      <span class="badge badge-warn">needs your input</span>
-    {% elif e.state == 'failed' %}
-      <span class="badge badge-err">failed</span>
-    {% elif e.state == 'processing' %}
-      <span class="badge badge-busy">processing{% if e.stage %} — {{ e.stage }}{% endif %}</span>
-    {% else %}
-      <span class="badge">waiting in queue</span>
-    {% endif %}
-    <span>{{ e.updated_at[:16].replace('T', ' ') }}</span>
-    <span>from {{ e.source }}</span>
-    {% if e.item_category %}<span>{{ e.item_category }}</span>{% endif %}
-  </div>
-
   {% if e.item_id and e.item_title %}
     <h3 class="rc-title"><a href="/card/{{ e.item_id }}">{{ e.item_title }}</a></h3>
+    {% if e.item_category %}<div class="rc-meta"><span>{{ e.item_category }}</span></div>{% endif %}
     {% if e.state == 'merged' %}<p class="rc-desc muted">Merged into this existing note.</p>
     {% elif e.result_kind == 'already_saved' %}<p class="rc-desc muted">Already saved.</p>
     {% elif e.item_desc %}<p class="rc-desc">{{ e.item_desc }}</p>{% endif %}

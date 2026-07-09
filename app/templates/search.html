@@ -48,22 +48,10 @@
 <script>
 const form = document.getElementById('search-form');
 
-const KIND_ICONS = { youtube: '▶', instagram: '◉', tiktok: '♪', web: '▤', manual: '✎' };
-
-function tagChips(tags) {
-  tags = tags || [];
-  const shown = tags.slice(0, 3).map(t => `<span class="tag">#${escapeHtml(t)}</span>`);
-  if (tags.length > 3) shown.push(`<span class="tag tag-more">+${tags.length - 3}</span>`);
-  return shown.join('');
-}
-
 function resultRow(res) {
-  const doneBadge = res.status === 'done' ? '<span class="badge">done</span>' : '';
-  const matchBadge = res.matched_in_transcript ? '<span class="badge badge-info">matched in transcript</span>' : '';
   const doneBtn = res.status === 'done' ? ''
     : `<button type="button" class="qa-btn qa-done" data-id="${res.id}" aria-label="Mark ${escapeHtml(res.title)} as done" title="Done">✓</button>`;
   const pointsJson = escapeHtml(JSON.stringify(res.main_points || []));
-  const kind = KIND_ICONS[res.platform] || '▤';
   return `
     <div class="card-box result-card result-row" data-open="/card/${res.id}"
       data-copy-title="${escapeHtml(res.title)}" data-copy-desc="${escapeHtml(res.short_description || '')}"
@@ -73,19 +61,14 @@ function resultRow(res) {
       <div class="rc-top">
         <div class="rc-main">
           <h3 class="rc-title">${escapeHtml(res.title)}</h3>
+          <div class="rc-meta"><span>${escapeHtml(res.category_path || '—')}</span></div>
           ${res.short_description ? `<p class="rc-desc">${escapeHtml(res.short_description)}</p>` : ''}
-          <div class="rc-meta">${matchBadge}${doneBadge}
-            <span>${escapeHtml(res.date || '')}</span>
-            <span>${escapeHtml(res.category_path || '—')}</span>
-            ${tagChips(res.tags)}
-          </div>
         </div>
         <div class="rc-actions">
           <a class="qa-btn qa-open" href="/card/${res.id}" aria-label="Open ${escapeHtml(res.title)}" title="Open"
             onclick="event.stopPropagation()">↗</a>
           <button type="button" class="qa-btn qa-copy" aria-label="Copy ${escapeHtml(res.title)}" title="Copy">⧉</button>
           ${doneBtn}
-          <span class="row-kind" aria-hidden="true" title="${escapeHtml(res.platform || '')}">${kind}</span>
         </div>
       </div>
     </div>`;
