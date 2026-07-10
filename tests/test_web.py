@@ -33,3 +33,12 @@ def test_category_tree_zero_notes_still_listed(db_conn, vault_dir):
     db_conn.commit()
     cats = {c["path"]: c for c in web.category_tree(db_conn)}
     assert cats["Empty"]["total_note_count"] == 0
+
+
+def test_code_stamp_endpoint_matches_disk():
+    """run_app.py restarts a running server whose /api/code-stamp differs from
+    the code on disk; a freshly imported app must therefore always match."""
+    from app import version
+    assert web.api_code_stamp() == {"stamp": web.CODE_STAMP}
+    assert web.CODE_STAMP == version.code_stamp()
+    assert web.CODE_STAMP.isdigit()
