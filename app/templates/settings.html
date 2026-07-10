@@ -1,11 +1,25 @@
 {% extends "base.html" %}
-{% block title %}Settings — Knowledge Vault{% endblock %}
+{% block title %}Settings — Notulus{% endblock %}
 {% block content %}
 <h2>Settings</h2>
+
+<div class="card-box">
+  <div class="settings-section" style="border-bottom:none; padding-bottom:0;">
+    <h3><span class="sec-ico" aria-hidden="true"><svg><use href="#ic-sun"/></svg></span> Appearance</h3>
+    <label class="theme-switch-row">
+      <span>Light mode</span>
+      <span class="theme-switch">
+        <input type="checkbox" data-theme-toggle>
+        <span class="theme-switch-track" aria-hidden="true"></span>
+      </span>
+    </label>
+  </div>
+</div>
+
 <form id="settings-form" class="card-box">
   <div class="settings-section">
     <h3><span class="sec-ico" aria-hidden="true"><svg><use href="#ic-folder"/></svg></span> Vault Identity</h3>
-    <label>Vault folder (your Obsidian vault for Knowledge Vault)</label>
+    <label>Vault folder (your Obsidian vault for Notulus)</label>
     <input name="vault_path" value="{{ cfg.vault_path }}">
   </div>
 

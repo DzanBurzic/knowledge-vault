@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}{{ cat.name }} — Knowledge Vault{% endblock %}
+{% block title %}{{ cat.name }} — Notulus{% endblock %}
 {% block content %}
 <p><a href="/browse{% if include_archived %}?include_archived=1{% endif %}">← All categories</a></p>
 <h2>{{ cat.path }} {% if cat.status == 'archived' %}<span class="badge">archived</span>{% endif %}</h2>

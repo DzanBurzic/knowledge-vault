@@ -13,6 +13,9 @@ cloudflare/.wrangler/
 .wrangler/
 node_modules/
 
+# Local dev-preview tooling config, not app functionality.
+.claude/
+
 # Python
 __pycache__/
 *.pyc

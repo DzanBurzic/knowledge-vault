@@ -13,7 +13,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from . import (backup, categories, cloudsync, db, dedupe, inbox, lifecycle,
-               notes, ollama_client, pipeline, search, urltools)
+               notes, ollama_client, pipeline, search, urltools, version)
 from .config import load_config, save_config, vault_path
 from .worker import WORKER
 
@@ -46,7 +46,11 @@ async def lifespan(app: FastAPI):
     WORKER.stop()
 
 
-app = FastAPI(title="Knowledge Vault", lifespan=lifespan)
+# Frozen at import: the stamp of the code THIS process is actually running.
+# run_app.py compares it against a fresh disk computation to spot stale servers.
+CODE_STAMP = version.code_stamp()
+
+app = FastAPI(title="Notulus", lifespan=lifespan)
 app.mount("/static", StaticFiles(directory=str(Path(__file__).parent / "static")), name="static")
 
 
@@ -264,6 +268,11 @@ def api_add(input: str = Form(...), notes_field: str = Form("")):
         )
     WORKER.wake()
     return {"ok": True, "queue_id": qid, "detected": "url" if is_url else "text"}
+
+
+@app.get("/api/code-stamp")
+def api_code_stamp():
+    return {"stamp": CODE_STAMP}
 
 
 @app.get("/api/status")

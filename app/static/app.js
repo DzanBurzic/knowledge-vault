@@ -292,3 +292,41 @@ if (bulkTagBtn) {
   });
   document.getElementById('bulk-clear-btn').addEventListener('click', clearBulkSelection);
 }
+
+// ----------------------------------------------------------------- theme
+// Light/dark toggle. The inline script in base.html already set
+// document.documentElement.dataset.theme before first paint (no flash); this
+// wires up the Settings control, persists the choice, keeps the theme-color/
+// color-scheme meta tags in sync, and tells the graph page to re-pick its
+// canvas palette (canvas draws with plain hex, so it can't follow CSS vars).
+function currentTheme() {
+  return document.documentElement.dataset.theme === 'light' ? 'light' : 'dark';
+}
+function applyTheme(theme) {
+  document.documentElement.dataset.theme = theme;
+  try { localStorage.setItem('nv-theme', theme); } catch (e) {}
+  const themeColor = document.querySelector('meta[name="theme-color"]');
+  if (themeColor) themeColor.setAttribute('content', theme === 'light' ? '#ffffff' : '#050505');
+  const colorScheme = document.querySelector('meta[name="color-scheme"]');
+  if (colorScheme) colorScheme.setAttribute('content', theme);
+  document.dispatchEvent(new CustomEvent('themechange', { detail: { theme } }));
+}
+function syncThemeControls() {
+  const isLight = currentTheme() === 'light';
+  document.querySelectorAll('[data-theme-toggle]').forEach((el) => {
+    if (el.type === 'checkbox') el.checked = isLight;
+    else el.setAttribute('aria-pressed', String(isLight));
+  });
+}
+function initThemeToggle() {
+  applyTheme(currentTheme()); // sync meta tags with what the inline script already applied
+  syncThemeControls();
+  document.querySelectorAll('[data-theme-toggle]').forEach((el) => {
+    const evt = el.type === 'checkbox' ? 'change' : 'click';
+    el.addEventListener(evt, () => {
+      applyTheme(currentTheme() === 'light' ? 'dark' : 'light');
+      syncThemeControls();
+    });
+  });
+}
+initThemeToggle();

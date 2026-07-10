@@ -20,6 +20,43 @@
   let anim = null;
   let dpr = Math.max(1, window.devicePixelRatio || 1);
 
+  // Canvas draws with plain color values, not CSS, so it can't follow the
+  // page's [data-theme] via var() — this picks the matching palette by hand.
+  // Recomputed per render() call (cheap) so a live theme toggle repaints
+  // correctly without a page reload.
+  //
+  // GENERATED — do not hand-edit the color values or GRAPH_LABEL_SIZES
+  // below. Both this file and cloudflare/worker.js's identical copy are
+  // regenerated from graph_theme.json by scripts/sync_graph_theme.py, so a
+  // fix only has to be made once instead of hand-mirrored (that's exactly
+  // how the zoom-label bug got fixed in only one of the two files earlier).
+  // Run: py -3.12 scripts/sync_graph_theme.py
+  // GRAPH-THEME:PALETTE:BEGIN
+  function palette() {
+    const light = document.documentElement.dataset.theme === "light";
+    return light ? {
+      linkDim: "rgba(0,0,0,0.05)", linkOn: "rgba(10,10,10,0.8)",
+      linkRelated: "rgba(0,0,0,0.22)", linkDefault: "rgba(0,0,0,0.10)",
+      glowIn: "rgba(0,0,0,0.30)", glowOut: "rgba(0,0,0,0)",
+      hiRing: "rgba(0,0,0,0.10)", nodeStroke: "rgba(250,250,250,0.9)",
+      catFill: "#1a1a1a", noteFill: "#6b6b6b", doneFill: "#d4d4d4",
+      catRingOn: "rgba(0,0,0,0.35)", catRingDone: "rgba(215,215,215,0.9)",
+      labelStroke: "rgba(250,250,250,0.85)",
+    } : {
+      linkDim: "rgba(255,255,255,0.05)", linkOn: "rgba(252,252,252,0.8)",
+      linkRelated: "rgba(255,255,255,0.24)", linkDefault: "rgba(255,255,255,0.12)",
+      glowIn: "rgba(255,255,255,0.45)", glowOut: "rgba(255,255,255,0)",
+      hiRing: "rgba(255,255,255,0.14)", nodeStroke: "rgba(5,5,5,0.9)",
+      catFill: "#fcfcfc", noteFill: "#a3a3a3", doneFill: "#2e2e2e",
+      catRingOn: "rgba(255,255,255,0.5)", catRingDone: "rgba(48,48,48,0.9)",
+      labelStroke: "rgba(5,5,5,0.85)",
+    };
+  }
+  // GRAPH-THEME:PALETTE:END
+  // GRAPH-THEME:SIZES:BEGIN
+  const GRAPH_LABEL_SIZES = { catBase: 15, noteBase: 13, noteFloor: 12 };
+  // GRAPH-THEME:SIZES:END
+
   const LABEL_BUDGET = 28;
   function truncateLabel(s) {
     if (s.length <= LABEL_BUDGET) return s;
@@ -146,6 +183,7 @@
 
   // --------------------------------------------------------------- render
   function render() {
+    const pal = palette();
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, W(), H());
     ctx.setTransform(view.k * dpr, 0, 0, view.k * dpr, view.x * dpr, view.y * dpr);
@@ -158,10 +196,9 @@
     for (const l of links) {
       const s = byId[l.source], t = byId[l.target];
       const on = hi && (l.source === active.id || l.target === active.id);
-      if (hi && !on) ctx.strokeStyle = "rgba(255,255,255,0.05)";
-      else if (on) ctx.strokeStyle = "rgba(252,252,252,0.8)";
-      else ctx.strokeStyle = l.kind === "related"
-        ? "rgba(255,255,255,0.24)" : "rgba(255,255,255,0.12)";
+      if (hi && !on) ctx.strokeStyle = pal.linkDim;
+      else if (on) ctx.strokeStyle = pal.linkOn;
+      else ctx.strokeStyle = l.kind === "related" ? pal.linkRelated : pal.linkDefault;
       ctx.lineWidth = (on ? 1.6 : 0.9) / view.k;
       ctx.beginPath(); ctx.moveTo(s.x, s.y); ctx.lineTo(t.x, t.y); ctx.stroke();
     }
@@ -173,29 +210,29 @@
       const dim = hi && !hi.has(n.id);
       const done = n.status === "done";
       let color;
-      if (done) color = "#2e2e2e";
-      else color = n.type === "category" ? "#fcfcfc" : "#a3a3a3";
+      if (done) color = pal.doneFill;
+      else color = n.type === "category" ? pal.catFill : pal.noteFill;
       ctx.globalAlpha = dim ? 0.25 : 1;
       if (n === active && !dim) {
-        // glowing hub — smoky white bloom
+        // glowing hub — smoky bloom
         const glow = ctx.createRadialGradient(n.x, n.y, r, n.x, n.y, r + 16 / view.k);
-        glow.addColorStop(0, "rgba(255,255,255,0.45)");
-        glow.addColorStop(1, "rgba(255,255,255,0)");
+        glow.addColorStop(0, pal.glowIn);
+        glow.addColorStop(1, pal.glowOut);
         ctx.beginPath(); ctx.arc(n.x, n.y, r + 16 / view.k, 0, 6.2832);
         ctx.fillStyle = glow; ctx.fill();
       } else if (hi && hi.has(n.id) && !dim) {
         ctx.beginPath(); ctx.arc(n.x, n.y, r + 4 / view.k + 3, 0, 6.2832);
-        ctx.fillStyle = "rgba(255,255,255,0.14)";
+        ctx.fillStyle = pal.hiRing;
         ctx.fill();
       }
       ctx.beginPath(); ctx.arc(n.x, n.y, r, 0, 6.2832);
       ctx.fillStyle = color; ctx.fill();
-      ctx.lineWidth = 1.2 / view.k; ctx.strokeStyle = "rgba(5,5,5,0.9)"; ctx.stroke();
+      ctx.lineWidth = 1.2 / view.k; ctx.strokeStyle = pal.nodeStroke; ctx.stroke();
       // Category nodes carry an outer ring so they read as anchors (R21).
       if (n.type === "category") {
         ctx.beginPath(); ctx.arc(n.x, n.y, r + 3.5 / view.k, 0, 6.2832);
         ctx.lineWidth = 1.6 / view.k;
-        ctx.strokeStyle = done ? "rgba(48,48,48,0.9)" : "rgba(255,255,255,0.5)";
+        ctx.strokeStyle = done ? pal.catRingDone : pal.catRingOn;
         ctx.stroke();
       }
       ctx.globalAlpha = 1;
@@ -211,15 +248,23 @@
       if (!show) continue;
       if (hi && !hi.has(n.id) && view.k <= 1.15 && !isCat) continue;
       const r = radius(n);
-      const size = (isCat ? 12 : 10.5) / view.k;
+      // On-screen (apparent) size = world size × view.k, since the canvas is
+      // scaled by view.k. Category anchors and the peeked node stay a
+      // constant apparent size at every zoom. Plain note labels ease down
+      // from that same size toward a legible floor as you zoom in past the
+      // reveal point — this is what keeps a dense cluster from clashing the
+      // instant it's revealed, without ever shrinking small enough to
+      // become unreadable at higher zoom (that floor is the fix).
+      const base = isCat ? GRAPH_LABEL_SIZES.catBase : GRAPH_LABEL_SIZES.noteBase;
+      const apparent = (isCat || isActive) ? base : Math.max(GRAPH_LABEL_SIZES.noteFloor, base / Math.sqrt(view.k));
+      const size = apparent / view.k;
       ctx.font = (isCat ? "600 " : "") + size + "px system-ui, sans-serif";
       // The peeked node shows its full, untruncated label (R24); others clip.
       const label = isActive ? n.label : truncateLabel(n.label);
       ctx.globalAlpha = hi && !hi.has(n.id) ? 0.2 : (isCat ? 0.95 : 0.8);
-      ctx.fillStyle = "#050505";
-      ctx.lineWidth = 3 / view.k; ctx.strokeStyle = "rgba(5,5,5,0.85)";
+      ctx.lineWidth = 3 / view.k; ctx.strokeStyle = pal.labelStroke;
       ctx.strokeText(label, n.x, n.y + r + 3 / view.k);
-      ctx.fillStyle = isCat ? "#fcfcfc" : "#a3a3a3";
+      ctx.fillStyle = isCat ? pal.catFill : pal.noteFill;
       ctx.fillText(label, n.x, n.y + r + 3 / view.k);
       ctx.globalAlpha = 1;
     }
@@ -350,6 +395,10 @@
   const zout = document.getElementById("graph-zoom-out");
   if (zin) zin.addEventListener("click", () => zoomCenter(1.3));
   if (zout) zout.addEventListener("click", () => zoomCenter(1 / 1.3));
+
+  // Canvas colors are plain values, not CSS, so a live theme toggle needs an
+  // explicit repaint — render() alone (not reheat()) so physics stays settled.
+  document.addEventListener("themechange", () => render());
 
   resize();
   load();

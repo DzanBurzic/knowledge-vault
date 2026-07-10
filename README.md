@@ -1,4 +1,4 @@
-# Knowledge Vault
+# Notulus
 
 Save reels, videos, and articles and get back a short, useful note — not a
 transcript. Everything runs **locally on your own PC** using a free local AI
@@ -82,7 +82,7 @@ somewhere to wait until your PC turns on) and the pages you ask it to fetch.
   your Start menu, then it resumes automatically.
 - **Setup can't find Python** → install [Python 3.12](https://www.python.org/downloads/)
   first (tick "Add python.exe to PATH" during install), then rerun setup.
-- **Port already in use** → close any other copy of Knowledge Vault that
+- **Port already in use** → close any other copy of Notulus that
   might already be running, or change `"port"` in `config.json` (created
   after first setup) and restart.
 - **Automatic phone inbox setup didn't finish** → setup prints why and falls

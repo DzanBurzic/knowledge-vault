@@ -1,5 +1,5 @@
 @echo off
-title Knowledge Vault
+title Notulus
 cd /d "%~dp0"
 
 py -3.12 --version >nul 2>nul

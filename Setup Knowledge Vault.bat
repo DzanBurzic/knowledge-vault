@@ -1,5 +1,5 @@
 @echo off
-title Knowledge Vault Setup
+title Notulus Setup
 cd /d "%~dp0"
 
 where py >nul 2>nul

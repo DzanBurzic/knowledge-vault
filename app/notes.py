@@ -35,7 +35,7 @@ def assert_in_vault(path: Path, vault: Path) -> Path:
 
 
 def vault_is_safe(vault: Path) -> tuple[bool, str]:
-    """R55: only operate on a folder Knowledge Vault created (marker file),
+    """R55: only operate on a folder Notulus created (marker file),
     an empty folder, or one that doesn't exist yet."""
     vault = Path(vault)
     if not vault.exists():
@@ -47,7 +47,7 @@ def vault_is_safe(vault: Path) -> tuple[bool, str]:
         return True, ""
     return False, (
         f"The vault folder '{vault}' already exists and contains files that "
-        f"Knowledge Vault did not create ({', '.join(foreign[:5])}...). "
+        f"Notulus did not create ({', '.join(foreign[:5])}...). "
         "Pick an empty or new folder to keep your files safe."
     )
 

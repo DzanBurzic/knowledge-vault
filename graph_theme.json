@@ -1,0 +1,22 @@
+{
+  "_comment": "Single source of truth for the knowledge-graph canvas theme (label sizes + light/dark color palette), shared by app/static/graph.js (PC) and cloudflare/worker.js (phone). Canvas drawing uses plain color values, not CSS, so both platforms hand-pick a palette by theme -- this file exists so that picking only has to happen once. Edit here, then run: py -3.12 scripts/sync_graph_theme.py",
+  "labelSizes": { "catBase": 15, "noteBase": 13, "noteFloor": 12 },
+  "paletteDark": {
+    "linkDim": "rgba(255,255,255,0.05)", "linkOn": "rgba(252,252,252,0.8)",
+    "linkRelated": "rgba(255,255,255,0.24)", "linkDefault": "rgba(255,255,255,0.12)",
+    "glowIn": "rgba(255,255,255,0.45)", "glowOut": "rgba(255,255,255,0)",
+    "hiRing": "rgba(255,255,255,0.14)", "nodeStroke": "rgba(5,5,5,0.9)",
+    "catFill": "#fcfcfc", "noteFill": "#a3a3a3", "doneFill": "#2e2e2e",
+    "catRingOn": "rgba(255,255,255,0.5)", "catRingDone": "rgba(48,48,48,0.9)",
+    "labelStroke": "rgba(5,5,5,0.85)"
+  },
+  "paletteLight": {
+    "linkDim": "rgba(0,0,0,0.05)", "linkOn": "rgba(10,10,10,0.8)",
+    "linkRelated": "rgba(0,0,0,0.22)", "linkDefault": "rgba(0,0,0,0.10)",
+    "glowIn": "rgba(0,0,0,0.30)", "glowOut": "rgba(0,0,0,0)",
+    "hiRing": "rgba(0,0,0,0.10)", "nodeStroke": "rgba(250,250,250,0.9)",
+    "catFill": "#1a1a1a", "noteFill": "#6b6b6b", "doneFill": "#d4d4d4",
+    "catRingOn": "rgba(0,0,0,0.35)", "catRingDone": "rgba(215,215,215,0.9)",
+    "labelStroke": "rgba(250,250,250,0.85)"
+  }
+}

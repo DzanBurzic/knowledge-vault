@@ -1,4 +1,4 @@
-"""One-time Knowledge Vault setup (R4, R5).
+"""One-time Notulus setup (R4, R5).
 
 Run via 'Setup Knowledge Vault.bat'. Checks/installs prerequisites, pulls the
 Ollama models, creates the vault folder + database, prints the phone (Cloudflare)
@@ -189,7 +189,7 @@ PART D — Install the app on your phone
   2. Tap the Chrome menu (three dots, top right) →  "Add to Home screen"
      → "Install". Confirm.
   3. Done! Now open Instagram, pick any reel → Share → find
-     "Knowledge Vault" in the share sheet → tap it once → "Saved ✓".
+     "Notulus" in the share sheet → tap it once → "Saved ✓".
      The card appears on the PC dashboard next time the app runs.
 
 PART E — View your notes on the phone
@@ -253,18 +253,18 @@ def print_phone_guide(cfg: dict, auto_ok: bool):
 
 def offer_autostart():
     step("Step 6: Start automatically with Windows? (R5)")
-    answer = input("  Start Knowledge Vault automatically when you log in? [y/n] ").strip().lower()
+    answer = input("  Start Notulus automatically when you log in? [y/n] ").strip().lower()
     if answer not in ("y", "yes"):
         print("  Skipped. You can rerun setup anytime to enable it.")
         return
     bat = APP_DIR / "Start Knowledge Vault.bat"
     result = subprocess.run(
         ["schtasks", "/Create", "/F", "/SC", "ONLOGON",
-         "/TN", "Knowledge Vault", "/TR", f'"{bat}"'],
+         "/TN", "Notulus", "/TR", f'"{bat}"'],
         capture_output=True, text=True,
     )
     if result.returncode == 0:
-        print(OK + "Task Scheduler entry 'Knowledge Vault' created.")
+        print(OK + "Task Scheduler entry 'Notulus' created.")
     else:
         print(WARN + "Could not create the scheduled task "
               f"({(result.stderr or result.stdout).strip()[:200]}).")
@@ -272,7 +272,7 @@ def offer_autostart():
 
 
 def main():
-    print("Knowledge Vault — one-time setup")
+    print("Notulus — one-time setup")
     print("=" * 40)
     install_requirements()
     from app.config import load_config, save_config
