@@ -803,6 +803,11 @@ const APP_JS = `(function(){
       if(n.type==='cat'){ gctx.beginPath(); gctx.arc(n.x,n.y,r+3.5/G.view.k,0,6.2832);
         gctx.lineWidth=1.6/G.view.k; gctx.strokeStyle=done?pal.catRingDone:pal.catRingOn; gctx.stroke(); }
       gctx.globalAlpha=1; });
+    // Labels draw in SCREEN space (transform reset), not under the zoom
+    // transform: drawing a 2px font and letting the canvas scale it 6x makes
+    // mobile browsers round glyph advances to whole pixels, so letters clump
+    // and overlap as you zoom in. At real size the text stays crisp.
+    gctx.setTransform(gdpr,0,0,gdpr,0,0);
     gctx.textAlign='center'; gctx.textBaseline='top';
     G.nodes.forEach(function(n){ var isCat=n.type==='cat'; var isActive=n===active;
       var show = isCat || G.view.k>1.2 || isActive || (active && (G.nb[active.id]||new Set()).has(n.id));
@@ -810,13 +815,14 @@ const APP_JS = `(function(){
       if(hi && !hi[n.id] && G.view.k<=1.2 && !isCat) return;
       var base=isCat?GRAPH_LABEL_SIZES.catBase:GRAPH_LABEL_SIZES.noteBase;
       var apparent=(isCat||isActive)?base:Math.max(GRAPH_LABEL_SIZES.noteFloor,base/Math.sqrt(G.view.k));
-      var r=gRadius(n), size=apparent/G.view.k;
-      gctx.font=(isCat?'600 ':'')+size+'px system-ui,sans-serif';
+      var r=gRadius(n);
+      var sx=n.x*G.view.k+G.view.x, sy=(n.y+r)*G.view.k+G.view.y+3;
+      gctx.font=(isCat?'600 ':'')+apparent+'px system-ui,sans-serif';
       var lab = isActive ? n.label : gTrunc(n.label);
       gctx.globalAlpha = hi && !hi[n.id] ? 0.2 : (isCat?0.95:0.8);
-      gctx.lineWidth=3/G.view.k; gctx.strokeStyle=pal.labelStroke;
-      gctx.strokeText(lab,n.x,n.y+r+3/G.view.k);
-      gctx.fillStyle=isCat?pal.catFill:pal.noteFill; gctx.fillText(lab,n.x,n.y+r+3/G.view.k);
+      gctx.lineWidth=3; gctx.strokeStyle=pal.labelStroke;
+      gctx.strokeText(lab,sx,sy);
+      gctx.fillStyle=isCat?pal.catFill:pal.noteFill; gctx.fillText(lab,sx,sy);
       gctx.globalAlpha=1; });
   }
   function gNodeAt(px,py){ var w=gToWorld(px,py), best=null, bd=1e9;

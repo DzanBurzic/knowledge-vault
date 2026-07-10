@@ -238,7 +238,12 @@
       ctx.globalAlpha = 1;
     }
 
-    // labels — categories always; notes when zoomed in, peeked or highlighted
+    // labels — categories always; notes when zoomed in, peeked or highlighted.
+    // Drawn in SCREEN space (transform reset), not under the zoom transform:
+    // drawing a tiny font (e.g. 2px at zoom 6) and letting the canvas scale
+    // it up makes some text stacks round glyph advances to whole pixels, so
+    // letters clump and overlap as you zoom in. At real size text stays crisp.
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.textAlign = "center"; ctx.textBaseline = "top";
     for (const n of nodes) {
       const isCat = n.type === "category";
@@ -248,24 +253,23 @@
       if (!show) continue;
       if (hi && !hi.has(n.id) && view.k <= 1.15 && !isCat) continue;
       const r = radius(n);
-      // On-screen (apparent) size = world size × view.k, since the canvas is
-      // scaled by view.k. Category anchors and the peeked node stay a
-      // constant apparent size at every zoom. Plain note labels ease down
-      // from that same size toward a legible floor as you zoom in past the
-      // reveal point — this is what keeps a dense cluster from clashing the
-      // instant it's revealed, without ever shrinking small enough to
-      // become unreadable at higher zoom (that floor is the fix).
+      // Apparent (on-screen) size: category anchors and the peeked node stay
+      // constant at every zoom. Plain note labels ease down from that same
+      // size toward a legible floor as you zoom in past the reveal point —
+      // keeps a dense cluster from clashing the instant it's revealed,
+      // without ever shrinking small enough to become unreadable.
       const base = isCat ? GRAPH_LABEL_SIZES.catBase : GRAPH_LABEL_SIZES.noteBase;
       const apparent = (isCat || isActive) ? base : Math.max(GRAPH_LABEL_SIZES.noteFloor, base / Math.sqrt(view.k));
-      const size = apparent / view.k;
-      ctx.font = (isCat ? "600 " : "") + size + "px system-ui, sans-serif";
+      const sx = n.x * view.k + view.x;
+      const sy = (n.y + r) * view.k + view.y + 3;
+      ctx.font = (isCat ? "600 " : "") + apparent + "px system-ui, sans-serif";
       // The peeked node shows its full, untruncated label (R24); others clip.
       const label = isActive ? n.label : truncateLabel(n.label);
       ctx.globalAlpha = hi && !hi.has(n.id) ? 0.2 : (isCat ? 0.95 : 0.8);
-      ctx.lineWidth = 3 / view.k; ctx.strokeStyle = pal.labelStroke;
-      ctx.strokeText(label, n.x, n.y + r + 3 / view.k);
+      ctx.lineWidth = 3; ctx.strokeStyle = pal.labelStroke;
+      ctx.strokeText(label, sx, sy);
       ctx.fillStyle = isCat ? pal.catFill : pal.noteFill;
-      ctx.fillText(label, n.x, n.y + r + 3 / view.k);
+      ctx.fillText(label, sx, sy);
       ctx.globalAlpha = 1;
     }
   }
