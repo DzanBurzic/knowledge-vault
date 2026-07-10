@@ -2,8 +2,9 @@
 
 Save reels, videos, and articles and get back a short, useful note — not a
 transcript. Everything runs **locally on your own PC** using a free local AI
-(no subscriptions, no cloud AI, nothing you save ever leaves your computer
-except an optional link sent from your phone).
+(no subscriptions, no cloud AI). An optional phone app lets you capture
+links on the go and read your notes from anywhere, synced through your own
+free Cloudflare account.
 
 Notes are saved as plain Markdown files in an [Obsidian](https://obsidian.md)
 vault, automatically organized into folders, deduplicated, and searchable —
@@ -72,9 +73,19 @@ Open that folder in Obsidian any time to browse your notes directly.
 ## Privacy
 
 All AI analysis (reading the video/article and writing the note) happens on
-your PC using Ollama — nothing is sent to any AI company. The only thing that
-ever leaves your PC is the link/text you share from your phone (which needs
-somewhere to wait until your PC turns on) and the pages you ask it to fetch.
+your PC using Ollama — nothing is ever sent to any AI company. If you set up
+the optional phone app, two things pass through your own free Cloudflare
+account (created under your login during setup, protected by a random secret
+token only your devices know):
+
+- the links/text you share from your phone — they need somewhere to wait
+  until your PC turns on, and
+- short summaries of your finished notes (title, key points, tags, source
+  link — never transcripts or full article text), so you can read and search
+  your library from your phone even while the PC is off.
+
+If you skip the phone setup, nothing leaves your PC at all, apart from
+fetching the pages and videos you ask it to save.
 
 ## If something goes wrong
 
